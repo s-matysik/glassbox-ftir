@@ -177,12 +177,18 @@ This section is appended to the frozen protocol rather than altering it. The
 protocol text above is unchanged; what follows records every place the
 execution departed from it, with the reason.
 
-1. **Repetitions of cross-validation.** Section 5 specifies twenty repetitions
-   of stratified five-fold cross-validation. One repetition was completed, at
-   a cost of 43 minutes on a single core. Intervals are therefore computed
-   across the five folds of one repetition, and the comparison with the
-   strongest baseline is a paired t-test across those folds instead of the
-   corrected resampled test, which requires repeated runs.
+1. **Repetitions of cross-validation.** Partially closed on 12 October 2026.
+   Section 5 specifies twenty repetitions of stratified five-fold
+   cross-validation. One repetition was completed, at a cost of 43 minutes on a
+   single core, and intervals are therefore computed across the five folds of
+   that repetition. The test is no longer a deviation: the corrected resampled
+   test of Nadeau and Bengio is a variance correction for overlapping training
+   sets, which applies to a single stratified k-fold run with the factor
+   `1/k + n_test/n_train`, and it is now computed and quoted (t = 11.21,
+   p = 0.00036 against the strongest baseline, against t = 16.81 uncorrected).
+   What a single repetition still cannot supply is the between-repetition
+   component of variance, so the interval remains narrower than twenty
+   repetitions would give.
 2. **Learning-curve sizes.** Closed on 11 October 2026. Section 6 specifies
    training fractions of 1, 2, 5, 10, 25, 50, 75 and 100 percent. All eight
    were run, the last two at a cost of 128 minutes for three seeds by five

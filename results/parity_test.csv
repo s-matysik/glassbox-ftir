@@ -1,5 +1,9 @@
 ﻿comparison,n_folds,mean_difference,ci_low,ci_high,t,p,test
-"svm_rbf minus glass box, forced choice",5,0.0517,0.0431,0.0602,16.81,7e-05,"paired t-test across folds, one repetition completed"
-"plsda minus glass box, forced choice",5,0.0513,0.0424,0.0603,15.93,9e-05,"paired t-test across folds, one repetition completed"
-"random_forest minus glass box, forced choice",5,0.0503,0.0419,0.0588,16.52,8e-05,"paired t-test across folds, one repetition completed"
-"cnn1d minus glass box, forced choice",5,0.05,0.0427,0.0573,18.97,5e-05,"paired t-test across folds, one repetition completed"
+"svm_rbf minus glass box, forced choice",5,0.0517,0.0431,0.0602,16.81,7e-05,"paired t-test across folds, uncorrected"
+"svm_rbf minus glass box, forced choice",5,0.0517,0.0389,0.0645,11.21,0.00036,"corrected resampled t-test, Nadeau and Bengio"
+"plsda minus glass box, forced choice",5,0.0513,0.0424,0.0603,15.93,9e-05,"paired t-test across folds, uncorrected"
+"plsda minus glass box, forced choice",5,0.0513,0.0379,0.0648,10.62,0.00045,"corrected resampled t-test, Nadeau and Bengio"
+"random_forest minus glass box, forced choice",5,0.0503,0.0419,0.0588,16.52,8e-05,"paired t-test across folds, uncorrected"
+"random_forest minus glass box, forced choice",5,0.0503,0.0376,0.063,11.02,0.00039,"corrected resampled t-test, Nadeau and Bengio"
+"cnn1d minus glass box, forced choice",5,0.05,0.0427,0.0573,18.97,5e-05,"paired t-test across folds, uncorrected"
+"cnn1d minus glass box, forced choice",5,0.05,0.039,0.061,12.65,0.00022,"corrected resampled t-test, Nadeau and Bengio"
