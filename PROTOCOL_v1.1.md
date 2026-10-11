@@ -183,10 +183,12 @@ execution departed from it, with the reason.
    across the five folds of one repetition, and the comparison with the
    strongest baseline is a paired t-test across those folds instead of the
    corrected resampled test, which requires repeated runs.
-2. **Learning-curve sizes.** Section 6 specifies training fractions of 1, 2,
-   5, 10, 25, 50, 75 and 100 percent. The run completed covers 1 to 50
-   percent. The conclusion that no crossover occurs is therefore established
-   only up to half of the training data.
+2. **Learning-curve sizes.** Closed on 11 October 2026. Section 6 specifies
+   training fractions of 1, 2, 5, 10, 25, 50, 75 and 100 percent. All eight
+   were run, the last two at a cost of 128 minutes for three seeds by five
+   folds. The conclusion is unchanged and now covers the whole specified
+   range: the interval of the difference excludes zero in favour of the
+   baseline at every size, so no crossover occurs.
 3. **Attribute-selection criterion.** The protocol does not state which of two
    defensible criteria selects the condition attributes. The validated
    classifier uses inner cross-validated balanced accuracy; Table III of the
