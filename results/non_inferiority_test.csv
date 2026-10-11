@@ -1,0 +1,9 @@
+﻿baseline,glass_box_mode,margin,mean_shortfall,t,p_one_sided,non_inferior_at_margin
+svm_rbf,glassbox_covered,0.01,0.0024,-7.19,0.00099,True
+svm_rbf,glassbox_forced,0.01,0.0517,13.56,0.99991,False
+plsda,glassbox_covered,0.01,0.002,-7.16,0.001,True
+plsda,glassbox_forced,0.01,0.0513,12.82,0.99989,False
+random_forest,glassbox_covered,0.01,0.001,-8.18,0.00061,True
+random_forest,glassbox_forced,0.01,0.0503,13.24,0.99991,False
+cnn1d,glassbox_covered,0.01,0.0007,-6.98,0.00111,True
+cnn1d,glassbox_forced,0.01,0.05,15.18,0.99995,False

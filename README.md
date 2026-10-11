@@ -1,75 +1,51 @@
-# Feature-level decoupling and action rules on open data
+# Glass-box FTIR classification of plastics
 
-Replication material for four article concepts. Every number quoted in the
-concept abstracts is produced by the scripts in `code/` from the data in
-`data_raw/`, and the resulting tables are in `results/`.
+Replication material for the IEEE Access article *A Glass-Box Classifier for
+FTIR Identification of Plastics: Accuracy Parity on Accepted Specimens With an
+Explicit Referral Rate*, together with the interactive documentation site.
 
-All four datasets are openly licensed (CC BY 4.0) and addressed by Zenodo
-record id, so the whole deposit rebuilds from a clean machine with two
-commands.
+Every number quoted in the manuscript and its supplement is produced by a named
+script in `code/` from a named table in `results/`. Nothing is typed by hand, so
+a number in the text cannot drift away from the computation behind it.
+
+## Reproducing the article, in order
+
+```
+python -m pip install -r requirements.txt
+python code/00_download_data.py        # FTIR-Plastics, Zenodo 10736650, CC BY 4.0
+python code/09_entry_condition.py      # Fig. 2
+python code/10_cv_parity.py            # Tables II and S1, Fig. 3   (about 43 min)
+python code/11_learning_curves.py      # Table VI, Fig. 6
+python code/12_rules_rough.py          # Tables III, IV, V; Figs. 4, 5, 8, 9
+python code/13_shap_oc.py              # Tables VII, VIII; Figs. 7, 10
+python code/24_parity_test.py          # the significance and non-inferiority tests
+python code/21_paper_figures.py        # every figure, from the tables above
+python code/23_supplement.py           # the supplement and its four figures
+python code/20_export_web.py           # the JSON the site reads
+python code/22_assemble_manuscript.py && python code/build_manuscript.py
+```
+
+Verification scripts: `code/test_ara_aco.py` checks the pipeline against
+synthetic spectra with planted structure, `code/test_equations.py` checks that
+every manuscript equation becomes a real Word equation, and `code/check_site.js`
+loads the site in a simulated browser and visits every view.
 
 ## What is here
 
 ```
-code/        the analysis, one script per concept, plus the downloader
-data_raw/    the four source datasets exactly as published, with their record metadata
-results/     every derived table the abstracts quote
-figures/     the two figures
-docs/        the concept documents, the Special Issue shortlist, the editor email templates
+code/        the method, the analyses, the document and figure builders, the tests
+results/     every derived table the manuscript and supplement quote
+figures/     the article figures (matys*.png) and the supplement figures (supp*.png)
+docs/        the manuscript sources, the reference list and the documentation site
+PROTOCOL_v1.1.md   the analysis protocol, frozen before any model was fitted
 ```
 
-## Rebuilding
-
-```
-python -m pip install -r requirements.txt
-python code/00_download_data.py          # about 620 MB, mostly the building archive
-python code/01_ftir.py                   # concepts 1 and 2
-python code/02_industrial_co2.py         # concept 3
-python code/03_buildings.py              # concept 4
-python code/04_choice_experiment_screening.py   # the screening that rejected survey data
-```
-
-Each script prints the numbers that appear in the corresponding abstract and
-writes its tables into `results/`.
-
-## The four concepts and where their numbers come from
-
-| Concept | Script | Key result | Table |
-|---|---|---|---|
-| 1. One absorption band makes recyclate quality contractible | `01_ftir.py` | methyl band moves 11.24 times further for a polymer change than for anything else; identification 0.868 from one band, 0.868 from nine channels, 0.662 base rate | `ftir_decoupling_ratios.csv`, `ftir_identification.csv` |
-| 2. Who pays for an unreadable batch | `01_ftir.py` | the three envelope attributes track the recovery matrix with ratios 2.16 to 2.47 and classification quality 0.482; action rule at confidence 0.721 | `ftir_aco_vs_factors.csv`, `ftir_action_rules.csv` |
-| 3. Most apparent misreporting is entity-matching error | `02_industrial_co2.py` | reliability of the discrepancy 0.576 against 0.941 required; typical gap falls 0.907 to 0.132 across name-match bands, anomaly rate 75.0 to 24.8 percent; strongest rule 0.852 | `c3_linkage_quality.csv`, `c3_action_rules.csv` |
-| 4. Load profiles reveal use, not efficiency ratings | `03_buildings.py` | detection floor 10.6 to 22.2 times below between-building variation; function identified at 0.76 against a 0.64 base rate, rating at 0.34 against 0.38 | `c4_entry_condition.csv`, `c4_identification.csv` |
-
-## The method
-
-`code/method.py` implements the pipeline used by all four: the
-amplitude-correlation-offset decomposition, the sensitivity threshold, the
-association-rule layer with a single-element antecedent, the overlap
-coefficient, rough-set approximations, and action rules with validation split
-over units rather than over records.
-
-The entry condition that governs all four concepts is the ratio of between-unit
-spread to the detection threshold. Expressed through reliability it equals the
-square root of reliability over one minus reliability, divided by k, so at
-k equal to 2 the instrument needs a reliability above 0.941. Concepts 1, 2 and
-4 clear it by an order of magnitude. Concept 3 does not, which is why its
-contribution is a warning plus a fix. `04_choice_experiment_screening.py`
-documents the rejection of survey instruments on the same criterion.
-
-`figures/fig_decoupling_ftir.png` is rebuilt by `code/05_figure.py` from the
-tables in `results/`. `figures/fig_aco_space.png` belongs to the earlier
-country-panel designs that were tested and rejected; it is kept as a record of
-that work and is not regenerated by these scripts. The same applies to
-`results/wb_panel.csv`, `aco_features_by_country.csv`,
-`ara_confidence_matrix.csv`, `action_rule_validation_grid.csv`,
-`pilot_results.csv`, `tested_designs.csv` and `transfer_conditions.csv`, which
-document the five rejected designs behind the entry condition.
+The raw spectra are not redistributed here: `code/00_download_data.py` fetches
+them from the Zenodo record, which is the citable source.
 
 ## The IEEE Access article
 
-The article on glass-box FTIR classification is built by a chain in which no
-number is ever typed by hand:
+The chain that builds the document:
 
 ```
 code/ara_aco.py            the method: ACO attributes, threshold calibration,
@@ -80,7 +56,7 @@ code/11_learning_curves.py learning curves (env: LC_SIZES, LC_SEEDS, LC_BASELINE
 code/12_rules_rough.py     rule matrix, rough sets, overlap, sensitivities
 code/13_shap_oc.py         attribution stability and acceptance sampling
 code/20_export_web.py      the JSON the documentation site reads
-code/21_paper_figures.py   figures/matys2..8.png, each from a table in results/
+code/21_paper_figures.py   figures/matys1..10.png, each from a table in results/
 code/22_assemble_manuscript.py  merges docs/manuscript_part*.json, builds the
                            tables from results/ and resolves [@key] citations
 code/build_manuscript.py   writes docs/IEEE_Access_manuscript.docx inside the

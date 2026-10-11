@@ -29,6 +29,30 @@ def paired(a, b):
     return d.mean(), d.mean() - half, d.mean() + half, t, p, n
 
 
+
+def non_inferiority(fs, margin=0.01):
+    """Is the covered mode non-inferior to the strongest baseline on all specimens?
+
+    One-sided paired test of H0: baseline minus glass box >= margin, against the
+    alternative that the shortfall is smaller than the margin. A significant
+    result supports a non-inferiority claim at that margin; it is not a test of
+    exact equality.
+    """
+    rows = []
+    for b in BASELINES:
+        for mode in ("glassbox_covered", "glassbox_forced"):
+            d = fs["bacc_" + b].to_numpy() - fs["bacc_" + mode].to_numpy()
+            n = len(d)
+            se = d.std(ddof=1) / np.sqrt(n)
+            t = (d.mean() - margin) / se
+            p = stats.t.cdf(t, n - 1)          # one-sided, lower tail
+            rows.append({"baseline": b, "glass_box_mode": mode, "margin": margin,
+                         "mean_shortfall": round(d.mean(), 4), "t": round(t, 2),
+                         "p_one_sided": round(float(p), 5),
+                         "non_inferior_at_margin": bool(p < 0.05)})
+    return pd.DataFrame(rows)
+
+
 def main():
     fs = pd.read_csv(os.path.join(RES, "cv_fold_scores.csv"))
     rows = []
@@ -40,6 +64,9 @@ def main():
                      "test": "paired t-test across folds, one repetition completed"})
     out = pd.DataFrame(rows)
     out.to_csv(os.path.join(RES, "parity_test.csv"), index=False, encoding="utf-8-sig")
+    ni = non_inferiority(fs, margin=0.01)
+    ni.to_csv(os.path.join(RES, "non_inferiority_test.csv"), index=False, encoding="utf-8-sig")
+    print(ni.to_string(index=False))
     print(out.to_string(index=False))
     print(f"strongest baseline: {out.sort_values('mean_difference').iloc[-1].comparison}")
 

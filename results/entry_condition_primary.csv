@@ -1,7 +1,7 @@
-﻿zbior,warstwa,n,SD_miedzy,szum,zapas
-FTIR-Plastics C8,HDPE,500,3.3841,0.1139,29.7
-FTIR-Plastics C8,LDPE,500,3.1489,0.1247,25.3
-FTIR-Plastics C8,PET,500,5.0142,0.0876,57.2
-FTIR-Plastics C8,PP,500,3.3433,0.0983,34.0
-FTIR-Plastics C8,PS,500,3.7669,0.1321,28.5
-FTIR-Plastics C8,PVC,500,3.4836,0.066,52.8
+﻿dataset,stratum,n,sd_between,noise_sd,spread_over_noise,spread_over_threshold
+FTIR-Plastics C8,HDPE,500,3.3836,0.1132,29.9,7.5
+FTIR-Plastics C8,LDPE,500,3.1487,0.1236,25.5,6.4
+FTIR-Plastics C8,PET,500,5.0135,0.0881,56.9,14.2
+FTIR-Plastics C8,PP,500,3.343,0.0975,34.3,8.6
+FTIR-Plastics C8,PS,500,3.7659,0.1319,28.6,7.1
+FTIR-Plastics C8,PVC,500,3.4829,0.0648,53.7,13.4

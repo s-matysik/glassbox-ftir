@@ -46,7 +46,7 @@ def label(a):
 
 
 def supp1_per_class():
-    """Per-polymer sensitivity for every method, with Wilson intervals."""
+    """Per-polymer sensitivity for every method, with bootstrap intervals."""
     d = pd.read_csv(os.path.join(RES, "cv_per_class.csv"))
     methods = ["glassbox_forced", "svm_rbf", "random_forest", "plsda", "cnn1d"]
     nice = {"glassbox_forced": "glass box", "svm_rbf": "SVM", "random_forest": "forest",
@@ -75,6 +75,7 @@ def supp1_per_class():
 def supp2_overlap_matrix():
     """Every attribute against every polymer pair, as a heat map."""
     d = pd.read_csv(os.path.join(RES, "ovl_matrix.csv"))
+    d = d[~d.comparison.str.contains("rest")]
     piv = d.pivot_table(index="attribute", columns="comparison", values="ovl")
     order = piv.mean(axis=1).sort_values().index
     piv = piv.loc[order]
@@ -89,8 +90,8 @@ def supp2_overlap_matrix():
     cb.ax.tick_params(labelsize=6)
     fig.savefig(os.path.join(FIG, "supp2.png"))
     plt.close(fig)
-    best = piv.mean(axis=1).idxmin()
-    return best, float(piv.mean(axis=1).min()), int((piv.values < 0.05).sum())
+    best = piv.median(axis=1).idxmin()
+    return best, float(piv.median(axis=1).min()), int((piv.values < 0.05).sum())
 
 
 def supp3_rule_intervals():
@@ -119,7 +120,8 @@ def supp3_rule_intervals():
 def supp4_attribution_ranks():
     """The attribution ranking fit by fit, against the rule's fixed selection."""
     d = pd.read_csv(os.path.join(RES, "shap_ranks_per_repeat.csv"))
-    attrs = [c for c in d.columns if c not in ("repeat", "glassbox_set")]
+    attrs = [c for c in d.columns
+             if c not in ("repeat", "glassbox_set", "gamma_criterion_set")]
     fig, ax = plt.subplots(figsize=(PAGE, 2.8))
     for a in attrs:
         ax.plot(d.repeat, d[a], marker="o", ms=2.5, lw=1.0, label=label(a))
@@ -198,18 +200,19 @@ def build_document(stats):
                  "mode in Table 2 is what remains once those specimens are set aside.",
             size=9.5)
     doc.add_picture(os.path.join(FIG, "supp1.png"), width=Inches(6.6))
-    doc_add(doc, "Fig. S1. Per-class sensitivity with 95 percent Wilson intervals, by method. "
+    doc_add(doc, "Fig. S1. Per-class sensitivity with 95% percentile bootstrap intervals over "
+                 "specimens, by method. "
                  "The glass box is shown in forced-choice mode so that the comparison is "
                  "like for like.", size=8, italic=True, space_after=10)
     doc_table(doc, stats["per_class"][0], stats["per_class"][1],
-              "Table S1. Per-class sensitivity and specificity, five-fold cross-validation.")
+              "Table S1. Per-class sensitivity and specificity, five-fold cross-validation. Intervals are percentile bootstrap over specimens, not binomial. For the covered mode the denominator is the number of accepted specimens of that class, not 500.")
 
     doc_add(doc, "S2. Separation of every attribute on every polymer pair", size=12,
             bold=True, space_after=4)
     doc_add(doc, "Fig. 5 of the article reports the median overlap coefficient per attribute. "
                  "Fig. S2 gives the full matrix: nine attributes against all fifteen polymer "
                  "pairs. The strongest single attribute is " + label(stats["best_attr"]) +
-            f", with a mean overlap of {stats['best_ovl']:.4f}, and "
+            f", with a median overlap of {stats['best_ovl']:.4f} across the 15 pairs, and "
             f"{stats['n_sep']} of the 135 attribute-pair combinations fall below an overlap "
                  "of 0.05, which is the regime in which a single named quantity separates two "
                  "materials almost completely. The matrix is also the diagnostic a laboratory "
@@ -294,7 +297,7 @@ def main():
 
     pc = pd.read_csv(os.path.join(RES, "cv_per_class.csv"))
     pc = pc[pc.method.isin(["glassbox_forced", "glassbox_covered", "svm_rbf"])]
-    per_class = (["Method", "Polymer", "n", "Sensitivity", "95% interval", "Specificity"],
+    per_class = (["Method", "Polymer", "n tested", "Sensitivity", "95% bootstrap interval", "Specificity"],
                  [[r.method.replace("_", " "), r.polymer, int(r.n_specimens),
                    f"{r.sensitivity:.3f}", f"{r.sens_ci_low:.3f} to {r.sens_ci_high:.3f}",
                    f"{r.specificity:.4f}"] for r in pc.itertuples()])

@@ -20,14 +20,14 @@ DOCS = os.path.join(ROOT, "docs")
 FIGMAP = [("matys2.png", "Entry condition on the primary dataset. The ratio of between-specimen "
            "spread to the noise-calibrated detection threshold, by polymer, on a logarithmic scale."),
           ("matys3.png", "Balanced accuracy under five-fold cross-validation. Bars show the mean "
-           "over folds and whiskers the 95 percent interval across folds. The glass box is shown "
+           "over folds and whiskers the 95% interval across folds. The glass box is shown "
            "twice: forced to decide every specimen, and on the specimens it accepts."),
           ("matys4.png", "Confidence that each named attribute moves beyond its own detection "
            "threshold when the polymer changes, for every pair of polymers."),
           ("matys5.png", "Median overlap coefficient between polymer pairs, by attribute. Lower is "
            "better separated."),
           ("matys6.png", "Learning curves and the difference against the strongest baseline. The "
-           "shaded band is the 95 percent bootstrap interval. No crossover occurs."),
+           "shaded band is the 95% bootstrap interval. No crossover occurs."),
           ("matys7.png", "Stability across twenty repeated fits. (a) ranks assigned by post-hoc "
            "attribution; (b) the attribute set selected by the rule."),
           ("matys8.png", "Operating-characteristic curves for four single-stage sampling plans "

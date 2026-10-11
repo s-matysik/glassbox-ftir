@@ -46,20 +46,21 @@ def label(a):
 
 def fig_entry():
     d = pd.read_csv(os.path.join(RES, "entry_condition_primary.csv"))
-    d = d.set_index("warstwa").loc[POLY_ORDER].reset_index()
+    d = d.set_index("stratum").loc[POLY_ORDER].reset_index()
     fig, ax = plt.subplots(figsize=(COL, 2.1))
-    ax.bar(d["warstwa"], d["zapas"], color=ACC, width=0.62)
+    ax.bar(d["stratum"], d["spread_over_noise"], color=ACC, width=0.62)
     ax.axhline(1, color=WARN, lw=1, ls="--")
     ax.text(5.4, 2.0, "method inapplicable below this line", ha="right",
             fontsize=6, color=WARN)
-    ax.set_ylabel("between-specimen spread /\ndetection threshold")
+    ax.set_ylabel("between-specimen spread /\ninstrument noise")
     ax.set_yscale("log")
-    for i, v in enumerate(d["zapas"]):
+    for i, v in enumerate(d["spread_over_noise"]):
         ax.text(i, v * 1.08, f"{v:.0f}", ha="center", fontsize=6.5)
-    ax.set_title("Entry condition is met by 25 to 57 times")
+    lo, hi = d["spread_over_noise"].min(), d["spread_over_noise"].max()
+    ax.set_title(f"Entry condition is met by {lo:.0f} to {hi:.0f} times")
     fig.savefig(os.path.join(FIG, "matys2.png"))
     plt.close(fig)
-    return d["zapas"].min(), d["zapas"].max()
+    return lo, hi
 
 
 def fig_rules():
@@ -85,6 +86,10 @@ def fig_rules():
 
 def fig_ovl():
     d = pd.read_csv(os.path.join(RES, "ovl_matrix.csv"))
+    # The file also holds six one-against-the-rest rows. Every summary in the
+    # article is taken over the 15 genuine polymer pairs only, so that the
+    # denominator quoted in the text is the one the figure shows.
+    d = d[~d.comparison.str.contains("rest")]
     med = d.groupby("attribute").ovl.median().sort_values()
     fig, ax = plt.subplots(figsize=(COL, 2.3))
     ax.barh([label(a) for a in med.index], med.values,
@@ -202,7 +207,8 @@ def fig_shap():
     if not os.path.exists(path):
         return None
     d = pd.read_csv(path)
-    attrs = [c for c in d.columns if c not in ("repeat", "glassbox_set")]
+    attrs = [c for c in d.columns
+             if c not in ("repeat", "glassbox_set", "gamma_criterion_set")]
     R = d[attrs].values
     fig, axes = plt.subplots(1, 2, figsize=(PAGE, 2.6))
     for j, a in enumerate(attrs):
