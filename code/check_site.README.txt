@@ -1,0 +1,11 @@
+Regression check for the documentation site.
+
+Loads docs/index.html in a simulated browser, evaluates the two scripts, then visits all
+ten views and asserts each builds a chart and responds to its control. Exits non-zero on
+any script error or empty view. It catches exactly the two defects that shipped on 10
+October 2026: a parse error in app.js, and an own property shadowing a prototype method.
+
+    cd code && npm install jsdom && node check_site.js
+
+To test what the server actually serves rather than the working copy, download index.html,
+assets/ and data/ from the published site into a folder and point the DOCS constant at it.

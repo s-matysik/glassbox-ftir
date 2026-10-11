@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glass-box FTIR classification of plastics</title>
+<meta name="description" content="Interactive supporting material for a glass-box classifier that identifies plastics from FTIR spectra and states when the evidence is insufficient.">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <div class="brand">glassbox-ftir<small>FTIR identification with an explicit referral rate</small></div>
+    <nav></nav>
+    <div style="margin-top:22px; font-size:12.5px; line-height:1.75">
+      <a href="https://github.com/s-matysik/glassbox-ftir">Repository</a><br>
+      <a href="https://github.com/s-matysik/glassbox-ftir/blob/main/PROTOCOL_v1.1.md">Frozen protocol</a><br>
+      <a href="https://github.com/s-matysik/glassbox-ftir/tree/main/results">Result tables</a><br>
+      <a href="https://github.com/s-matysik/glassbox-ftir/tree/main/code">Analysis code</a>
+    </div>
+    <button id="theme" style="margin-top:20px; width:100%">Light / dark</button>
+  </aside>
+  <main>
+    <div class="toprow">
+      <div>
+        <h1>A glass-box classifier for FTIR identification of plastics</h1>
+        <p class="lede">Accuracy parity on accepted specimens, with the referral rate stated rather than hidden.
+        Every chart on this site is drawn from the same result tables as the article, and each one can be
+        downloaded as a print-resolution image or as the data behind it.</p>
+      </div>
+    </div>
+    <div id="chips" class="chips" style="margin-bottom:18px"></div>
+    <div id="views"></div>
+    <footer>
+      Supporting material for an article submitted to IEEE Access.
+      Data: FTIR-Plastics (Zenodo 10736650) and a recyclate FTIR archive (Zenodo 21822279), both CC BY 4.0.
+      Code and tables: <a href="https://github.com/s-matysik/glassbox-ftir">github.com/s-matysik/glassbox-ftir</a>.
+      This page needs no network access once downloaded.
+    </footer>
+  </main>
+</div>
+<script src="assets/charts.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
