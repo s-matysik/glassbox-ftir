@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+title: >-
+  glassbox-ftir: analysis code, frozen protocol and result tables for a
+  glass-box classifier for FTIR identification of plastics
+message: >-
+  If you use this software or the tables it produces, please cite both this
+  repository and the article it supports.
+type: software
+license: MIT
+repository-code: https://github.com/s-matysik/glassbox-ftir
+url: https://s-matysik.github.io/glassbox-ftir/
+version: "1.0"
+date-released: "2026-10-12"
+authors:
+  - family-names: Sinansari
+    given-names: Puti
+    affiliation: Institut Teknologi Sepuluh Nopember, Surabaya, Indonesia
+  - family-names: Frankowski
+    given-names: Pawel Karol
+    affiliation: Maritime University of Szczecin, Poland
+  - family-names: Maka
+    given-names: Marcin
+    affiliation: Maritime University of Szczecin, Poland
+  - family-names: Zietek
+    given-names: Ryszard Daniel
+    affiliation: Maritime University of Szczecin, Poland
+  - family-names: Gordon
+    given-names: Radoslaw
+    affiliation: Maritime University of Szczecin, Poland
+  - family-names: Stawicki
+    given-names: Tomasz
+    affiliation: West Pomeranian University of Technology in Szczecin, Poland
+  - family-names: Matysik
+    given-names: Sebastian
+    orcid: "https://orcid.org/0009-0002-7264-0501"
+    affiliation: University of Szczecin, Poland
+keywords:
+  - infrared spectroscopy
+  - interpretable machine learning
+  - rough sets
+  - selective classification
+  - plastics recycling

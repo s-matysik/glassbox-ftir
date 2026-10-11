@@ -35,13 +35,15 @@ FIGMAP = [("matys2.png", "Entry condition on the primary dataset. The ratio of b
            "ten percent defective fractions."),
           ("matys9.png", "Mean transmittance spectrum of each polymer, with the three fixed "
            "analysis windows shaded. Every attribute used by the rule is computed inside one of "
-           "these three bands; the remaining 1500 channels enter no decision."),
+           "these three bands; the remaining 1610 channels enter no decision."),
           ("matys10.png", "Decidability by attribute set. (a) quality of approximation for the "
            "ten strongest two-attribute sets; (b) referral rate against the number of cells the "
            "set induces, showing that a finer grid buys certainty per cell at the cost of "
            "referring more specimens."),
           ("matys11.png", "Headline rule confidence under every choice the frozen protocol left "
-           "open: the pair sampling cap, the threshold multiplier and the spectral resolution.")]
+           "open: the pair sampling cap, the threshold multiplier and the spectral resolution. "
+           "The fourth open choice, the binning rule, moves the result far more than these three "
+           "and is reported separately in Table IX and in Section VI.")]
 
 
 def t(df, cols, rename=None, fmt=4):
@@ -113,6 +115,41 @@ def tables():
                    "producer_risk_at_1pct": "Producer risk at 1% defective",
                    "consumer_risk_at_10pct": "Consumer risk at 10% defective"})
 
+    sl = pd.read_csv(os.path.join(RES, "selective_comparison.csv"))
+    nice2 = {"glassbox_forced": "Glass box", "glassbox": "Glass box",
+             "svm_rbf": "SVM, radial basis function", "random_forest": "Random forest",
+             "plsda": "PLS-DA", "cnn1d": "1-D convolutional network"}
+    sl = sl[sl.regime != "all specimens"].copy()
+    sl["method"] = sl.method.map(nice2)
+    sl["regime"] = sl.regime.replace({
+        "specimens the rule accepts": "evaluated on the specimens the rule accepts",
+        "own reject option at matched coverage": "own reject option, same coverage"})
+    out["selective"] = t(sl, ["method", "regime", "balanced_accuracy", "mcc"],
+                         {"method": "Classifier", "regime": "Regime",
+                          "balanced_accuracy": "Balanced accuracy", "mcc": "MCC"})
+
+    pp = pd.read_csv(os.path.join(RES, "pareto_pairs.csv"))
+    out["pareto"] = t(pp, ["attributes", "coverage_out_of_fold", "bacc_covered",
+                           "bacc_forced", "gamma_train_mean"],
+                      {"attributes": "Attribute pair",
+                       "coverage_out_of_fold": "Coverage, out of fold",
+                       "bacc_covered": "Accepted specimens", "bacc_forced": "Forced choice",
+                       "gamma_train_mean": "Quality of approximation, training"})
+
+    bo = pd.read_csv(os.path.join(RES, "binning_out_of_fold.csv"))
+    out["binning"] = t(bo, ["binning", "attributes", "coverage_out_of_fold",
+                            "bacc_covered", "bacc_forced"],
+                       {"binning": "Binning rule", "attributes": "Attribute pair",
+                        "coverage_out_of_fold": "Coverage, out of fold",
+                        "bacc_covered": "Accepted specimens", "bacc_forced": "Forced choice"})
+
+    ac = pd.read_csv(os.path.join(RES, "accepted_per_class.csv"))
+    out["accepted"] = t(ac, ["polymer", "n_accepted", "coverage", "recall_forced",
+                             "recall_accepted"],
+                        {"polymer": "Polymer", "n_accepted": "Accepted of 500",
+                         "coverage": "Coverage", "recall_forced": "Recall, forced choice",
+                         "recall_accepted": "Recall, accepted only"})
+
     st = pd.read_csv(os.path.join(RES, "shap_stability.csv"))
     out["stability"] = t(st, ["representation", "repeats", "kendall_tau_mean",
                               "modal_set_share", "n_distinct_sets"],
@@ -173,6 +210,13 @@ def renumber_figures(sections):
     return n
 
 
+SELECTIVE_PARA = 'A classifier that may abstain is not comparable with one that may not, so the comparison in Table II is deliberately conservative towards the rule: the baselines are evaluated on every specimen. Two sharper comparisons are available and both are reported here, because a reader will otherwise ask for them. Restricted to exactly the specimens the rule accepts, the baselines do not get worse, they get better: the radial-basis support vector machine is perfect on that subset, and the other three exceed their own all-specimen figures. Given a reject option of their own, abstaining on the specimens where the margin between their two highest-scoring classes is smallest until they reach the same coverage of 0.753, all three margin-based baselines are also perfect. The rule reaches 0.9973 under the same budget. The conclusion this forces is worth stating plainly, because it bounds what the article claims: referral does not make the rule more accurate than a black box, and a black box with a confidence threshold attains a slightly higher selective accuracy. What the rule provides that they do not is that both halves of its output, the verdict and the refusal, are expressed in the same named physical quantities, so each can be written into a specification and contested. The measured cost of that property at matched coverage is 0.0027 balanced accuracy.'
+
+PERCLASS_PARA = 'The referral is also far from uniform across polymers, and the pattern is the one a spectroscopist would predict. Low-density polyethylene is accepted in only 33.8% of cases and high-density polyethylene in 71.4%, while poly(ethylene terephthalate) and poly(vinyl chloride) are accepted in more than 94%. The two polyolefins differ mainly in branching, which shifts band intensities without introducing a band, so the attributes that separate the other classes leave them in a shared cell. The rule therefore concentrates its refusals where the evidence really is weakest, which is the behaviour a referral mechanism should have, but it also means the referral rate quoted as a single number conceals a range from 5% to 66% depending on the material. Among accepted specimens recall is 0.9916 or better for every class.'
+
+PARETO_PARA = 'The two selection criteria named in Section V-B can now be separated on evidence. Table X evaluates six candidate pairs under the folds of the main experiment. The pair chosen by inner cross-validation is first on coverage, on accuracy over accepted specimens and on forced-choice accuracy, while the pair that maximises the quality of approximation on the training sample ranks fifth of six out of fold despite having the highest training-set value of that quantity, 0.9153 against 0.7735. Maximising the quality of approximation therefore overfits the training partition, and the disagreement between the criteria is resolved in favour of the cross-validated one. The same applies to the binning rule. Ten equal-width bins do not destroy accuracy, they destroy coverage: accuracy over accepted specimens rises to 1.0000 while coverage falls from 0.7530 to 0.3043 and forced-choice accuracy falls from 0.9480 to 0.7327. The binning rule is thus a dial on the referral rate, and the noise-derived setting is the one that keeps three quarters of the specimens decidable.'
+
+
 def main():
     parts = [json.load(open(os.path.join(DOCS, f"manuscript_part{i}.json"), encoding="utf-8"))
              for i in (1, 2, 3)]
@@ -231,6 +275,26 @@ def main():
     res.append({"type": "table", "number": "VIII",
                 "caption": "Producer and consumer risk for four single-stage sampling plans.",
                 "header": tb["oc"][0], "rows": tb["oc"][1]})
+    res.append({"type": "h2",
+                "text": "WHAT THE REFERRAL BUYS AND WHAT IT COSTS"})
+    res.append({"type": "para", "text": SELECTIVE_PARA})
+    res.append({"type": "table", "number": "IX",
+                "caption": "Every classifier evaluated under the same referral budget.",
+                "header": tb["selective"][0], "rows": tb["selective"][1],
+                "note": "Coverage is 0.753 in every row. A baseline abstains on the "
+                        "specimens where the margin between its two highest-scoring "
+                        "classes is smallest, until it reaches that coverage."})
+    res.append({"type": "para", "text": PERCLASS_PARA})
+    res.append({"type": "table", "number": "X",
+                "caption": "Candidate attribute pairs evaluated out of fold.",
+                "header": tb["pareto"][0], "rows": tb["pareto"][1],
+                "note": "The pair the classifier selects by inner cross-validation is "
+                        "first on every out-of-fold measure, while the pair that maximises "
+                        "the training quality of approximation is fifth."})
+    res.append({"type": "para", "text": PARETO_PARA})
+    res.append({"type": "table", "number": "XI",
+                "caption": "The binning rule, measured out of fold.",
+                "header": tb["binning"][0], "rows": tb["binning"][1]})
 
     meth = find("MATERIALS AND METHOD")["blocks"]
     meth.insert(2, {"type": "table", "number": "I",

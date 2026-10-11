@@ -39,7 +39,7 @@ for (const f of ["assets/charts.js", "assets/app.js"]) {
 }
 
 const VIEWS = ["overview", "spectra", "decision", "parity", "rules", "overlap",
-               "learning", "stability", "acceptance", "data"];
+               "learning", "stability", "acceptance", "referral", "data"];
 
 function render(view) {
   return new Promise(resolve => {

@@ -1,0 +1,5 @@
+﻿binning,attributes,coverage_out_of_fold,bacc_covered,bacc_forced
+sens.min width,A_W2+C_W3,0.753,0.9973,0.948
+sens.min width,O_W1+O_W2,0.7137,0.9668,0.929
+10 equal width,A_W2+C_W3,0.3043,1.0,0.7327
+10 equal width,O_W1+O_W2,0.1693,1.0,0.6907

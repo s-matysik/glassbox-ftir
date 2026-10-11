@@ -393,18 +393,20 @@
       sub: "Twenty fits on independently drawn training samples.",
       file: "stability",
       cap: "Left: the rank each attribute receives from post-hoc attribution, fit by fit. Right: the attribute set the rule selects. " +
-        "The attribution ranking is reasonably stable overall, but its top three changes in one repeat in five, " +
-        "while the rule's attribute set never changes. Corresponds to Figure 6 and Table VII of the article.",
+        "The attribution ranking is reasonably stable overall, but its top three changes in one repeat in ten, " +
+        "while the rule selects the same pair in 19 of 20 fits. Corresponds to Figure 6 and Table VII of the article.",
       csv: function () { return D.stability.ranks; }
     });
     var sh = sum.filter(function (r) { return /post-hoc/.test(r.representation); })[0];
+    var gbRow = sum.filter(function (r) { return /selected attributes/.test(r.representation); })[0];
+    var gbSets = gbRow ? gbRow.n_distinct_sets : 2;
     var cards = document.createElement("div");
     cards.className = "stat-grid";
     cards.innerHTML =
       '<div class="stat warn"><div class="v">' + sh.n_distinct_sets + '</div><div class="k">distinct attribution top-three sets</div></div>' +
       '<div class="stat warn"><div class="v">' + (sh.modal_set_share * 100).toFixed(0) + '%</div><div class="k">repeats sharing the modal set</div></div>' +
       '<div class="stat"><div class="v">' + GB.nice(sh.kendall_tau_mean, 3) + '</div><div class="k">mean rank correlation between fits</div></div>' +
-      '<div class="stat ok"><div class="v">1</div><div class="k">distinct glass-box attribute sets</div></div>';
+      '<div class="stat ok"><div class="v">' + gbSets + '</div><div class="k">distinct glass-box attribute sets</div></div>';
     p.plot.appendChild(cards);
     var host = document.createElement("div");
     p.plot.appendChild(host);
@@ -425,8 +427,95 @@
     });
     var note = document.createElement("div");
     note.className = "note";
-    note.innerHTML = "The rule selected <b>" + ranks[0].glassbox_set.split(", ").map(attrLabel).join("</b> and <b>") +
-      "</b> in all twenty fits.";
+    var modal = {};
+    ranks.forEach(function (r) { modal[r.glassbox_set] = (modal[r.glassbox_set] || 0) + 1; });
+    var best = Object.keys(modal).sort(function (a, b) { return modal[b] - modal[a]; })[0];
+    note.innerHTML = "The rule selected <b>" + best.split(", ").map(attrLabel).join("</b> and <b>") +
+      "</b> in " + modal[best] + " of " + ranks.length + " fits.";
+    p.plot.appendChild(note);
+  };
+
+  VIEWS.referral = function () {
+    var matched = toObjs(D.selective.matched);
+    var pairs = toObjs(D.selective.pairs);
+    var per = toObjs(D.selective.per_class);
+    var nice = {
+      glassbox_forced: "glass box", glassbox: "glass box",
+      svm_rbf: "SVM", random_forest: "random forest", plsda: "PLS-DA", cnn1d: "1-D CNN"
+    };
+    var own = matched.filter(function (r) { return /own reject/.test(r.regime); });
+    var p = panel({
+      title: "What the referral buys, and what it costs",
+      sub: "Every classifier held to the same referral budget of 75.3 percent coverage.",
+      file: "referral",
+      cap: "Given a reject option of their own, the margin-based baselines are perfect on the specimens they keep, " +
+        "while the rule reaches <b>0.9973</b>. Selective accuracy is therefore not the advantage: the advantage is " +
+        "that the refusal itself is stated in named spectral quantities. The measured cost at equal coverage is " +
+        "<b>0.0027</b> balanced accuracy. Corresponds to Table IX of the article.",
+      csv: function () { return D.selective.matched; }
+    });
+    own.sort(function (a, b) { return a.balanced_accuracy - b.balanced_accuracy; });
+    GB.barsH(p.plot, own.map(function (r) {
+      return {
+        k: nice[r.method] || r.method, v: r.balanced_accuracy,
+        c: /glass/.test(r.method) ? col("--warn") : col("--muted"),
+        label: GB.nice(r.balanced_accuracy, 4),
+        tip: "<b>" + (nice[r.method] || r.method) + "</b><br>balanced accuracy " +
+          GB.nice(r.balanced_accuracy, 4) + "<br>MCC " + GB.nice(r.mcc, 4) +
+          "<br>coverage " + GB.nice(r.coverage, 3)
+      };
+    }), { min: 0.99, max: 1.0, xlab: "balanced accuracy on accepted specimens", left: 150, height: 190 });
+
+    var h2 = document.createElement("h3");
+    h2.textContent = "Who gets referred";
+    h2.style.margin = "22px 0 6px";
+    p.plot.appendChild(h2);
+    var hostA = document.createElement("div");
+    p.plot.appendChild(hostA);
+    per.sort(function (a, b) { return a.coverage - b.coverage; });
+    GB.barsH(hostA, per.map(function (r) {
+      return {
+        k: r.polymer, v: r.coverage, c: PCOL[r.polymer] || col("--accent"),
+        label: (r.coverage * 100).toFixed(1) + "%",
+        tip: "<b>" + r.polymer + "</b><br>" + r.n_accepted + " of 500 accepted" +
+          "<br>recall on accepted " + GB.nice(r.recall_accepted, 4)
+      };
+    }), { min: 0, max: 1, xlab: "share of specimens the rule accepts", left: 90, height: 210 });
+
+    var h3 = document.createElement("h3");
+    h3.textContent = "Which attribute pair, judged out of fold";
+    h3.style.margin = "22px 0 6px";
+    p.plot.appendChild(h3);
+    var hostB = document.createElement("div");
+    p.plot.appendChild(hostB);
+    var f = new GB.Frame(hostB, { height: 290, margin: { t: 14, r: 20, b: 44, l: 58 } });
+    var xs = pairs.map(function (r) { return r.coverage_out_of_fold; });
+    var ys = pairs.map(function (r) { return r.bacc_covered; });
+    f.scales([Math.min.apply(null, xs) - 0.03, Math.max.apply(null, xs) + 0.03],
+             [Math.min.apply(null, ys) - 0.01, Math.max.apply(null, ys) + 0.005]);
+    f.axes("coverage, out of fold", "accuracy on accepted specimens");
+    var tipFor = function (pt) {
+      var r = pt[2];
+      return "<b>" + r.attributes.replace("+", " and ") + "</b><br>coverage " +
+        GB.nice(r.coverage_out_of_fold, 4) + "<br>accepted " + GB.nice(r.bacc_covered, 4) +
+        "<br>forced " + GB.nice(r.bacc_forced, 4) +
+        "<br>training quality of approximation " + GB.nice(r.gamma_train_mean, 4);
+    };
+    f.dots(pairs.map(function (r) {
+      return [r.coverage_out_of_fold, r.bacc_covered, r,
+              r.attributes === "A_W2+C_W3" ? col("--warn") : col("--accent")];
+    }), col("--accent"), { r: 5.5, alpha: 0.95, tip: tipFor });
+    pairs.forEach(function (r) {
+      GB.el("text", {
+        x: f.x(r.coverage_out_of_fold) + 8, y: f.y(r.bacc_covered) + 3.5,
+        fill: f.muted, "font-size": 10.5
+      }, f.g).textContent = r.attributes.replace("+", "/");
+    });
+    var note = document.createElement("div");
+    note.className = "note";
+    note.innerHTML = "The highlighted point is the pair the classifier selects by inner cross-validation. " +
+      "It is first on coverage and on accuracy at once. The pair with the highest training-set quality of " +
+      "approximation, <b>O_W1 and O_W2</b>, sits below and to the left: that criterion overfits the training partition.";
     p.plot.appendChild(note);
   };
 
@@ -487,17 +576,19 @@
     var ent = toObjs(D.entry), sens = toObjs(D.sensitivity);
     var p = panel({
       title: "Entry condition",
-      sub: "Between-specimen spread divided by the noise-calibrated detection threshold.",
+      sub: "Between-specimen spread divided by the instrument noise standard deviation.",
       file: "entry",
       cap: "Below about one the method cannot work at all, because real differences are smaller than what the instrument " +
         "produces by itself. Corresponds to Figure 1 of the article.",
       csv: function () { return D.entry; }
     });
-    GB.barsH(p.plot, ent.filter(function (r) { return state.poly.indexOf(r.warstwa) >= 0; }).map(function (r) {
+    GB.barsH(p.plot, ent.filter(function (r) { return state.poly.indexOf(r.stratum) >= 0; }).map(function (r) {
       return {
-        k: r.warstwa, v: r.zapas, c: PCOL[r.warstwa], label: GB.nice(r.zapas, 1),
-        tip: "<b>" + r.warstwa + "</b><br>spread " + GB.nice(r.SD_miedzy, 4) + "<br>noise " + GB.nice(r.szum, 4) +
-          "<br>ratio " + GB.nice(r.zapas, 1)
+        k: r.stratum, v: r.spread_over_noise, c: PCOL[r.stratum], label: GB.nice(r.spread_over_noise, 1),
+        tip: "<b>" + r.stratum + "</b><br>spread " + GB.nice(r.sd_between, 4) +
+          "<br>noise " + GB.nice(r.noise_sd, 4) +
+          "<br>spread / noise " + GB.nice(r.spread_over_noise, 1) +
+          "<br>spread / threshold " + GB.nice(r.spread_over_threshold, 1)
       };
     }), { xlab: "between-specimen spread / detection threshold", left: 86 });
 
@@ -545,7 +636,7 @@
     ["overview", "Overview"], ["spectra", "Spectrum explorer"], ["decision", "Where the decision is certain"],
     ["parity", "Accuracy parity"], ["rules", "Rule matrix"], ["overlap", "Separation"],
     ["learning", "Data efficiency"], ["stability", "Explanation stability"],
-    ["acceptance", "Acceptance sampling"], ["data", "Data and limits"]
+    ["referral", "What referral costs"], ["acceptance", "Acceptance sampling"], ["data", "Data and limits"]
   ];
 
   function render() {
@@ -554,7 +645,7 @@
     document.querySelectorAll("nav a").forEach(function (a) {
       a.classList.toggle("active", a.dataset.view === state.view);
     });
-    q("#chips").style.display = ["overview", "parity", "learning", "stability"].indexOf(state.view) >= 0 ? "none" : "flex";
+    q("#chips").style.display = ["overview", "parity", "learning", "stability", "referral"].indexOf(state.view) >= 0 ? "none" : "flex";
     location.replace("#" + state.view);
   }
 
@@ -599,7 +690,7 @@
     render();
   }
 
-  var FILES = ["spectra", "parity", "rough", "rules", "ovl", "learning", "oc", "stability", "entry", "sensitivity"];
+  var FILES = ["spectra", "parity", "rough", "rules", "ovl", "learning", "oc", "stability", "entry", "sensitivity", "selective"];
   Promise.all(FILES.map(function (f) {
     return fetch("data/" + f + ".json").then(function (r) {
       if (!r.ok) throw new Error(f + ": HTTP " + r.status);

@@ -164,3 +164,47 @@ purpose or contractual acceptance of any material; batch-level decisions,
 which are addressed conceptually through acceptance sampling; and any claim
 about the recyclate archive that depends on its polymer labels being
 independent of library matching.
+
+Added after the external review of 11 October 2026, and also not claimed: that
+the rule attains a higher selective accuracy than a black box operating under
+the same referral budget. It does not. Section V of the article reports the
+measured comparison, and the claim is confined to the legibility of the
+refusal, at a stated accuracy cost.
+
+## 9. Deviations from this protocol, as executed
+
+This section is appended to the frozen protocol rather than altering it. The
+protocol text above is unchanged; what follows records every place the
+execution departed from it, with the reason.
+
+1. **Repetitions of cross-validation.** Section 5 specifies twenty repetitions
+   of stratified five-fold cross-validation. One repetition was completed, at
+   a cost of 43 minutes on a single core. Intervals are therefore computed
+   across the five folds of one repetition, and the comparison with the
+   strongest baseline is a paired t-test across those folds instead of the
+   corrected resampled test, which requires repeated runs.
+2. **Learning-curve sizes.** Section 6 specifies training fractions of 1, 2,
+   5, 10, 25, 50, 75 and 100 percent. The run completed covers 1 to 50
+   percent. The conclusion that no crossover occurs is therefore established
+   only up to half of the training data.
+3. **Attribute-selection criterion.** The protocol does not state which of two
+   defensible criteria selects the condition attributes. The validated
+   classifier uses inner cross-validated balanced accuracy; Table III of the
+   article reports the pair that maximises the training-set quality of
+   approximation. The two disagree. Table X settles the disagreement out of
+   fold in favour of the cross-validated criterion, and both are reported.
+4. **Noise estimate in the entry condition.** The ratio quoted in an early
+   draft, 25.3 to 57.2, came from an ad hoc calculation. The released figure,
+   25.5 to 56.9, is produced by `code/09_entry_condition.py`, which is now
+   part of the deposit. The difference is the estimator, not the data.
+5. **Scaling inside the baseline pipelines.** Feature scaling is estimated on
+   the whole training fold before the inner split used for hyperparameter
+   search. Outer estimates are unaffected, since they are computed on folds
+   the scaler never saw, but the tuned hyperparameters are mildly optimistic.
+6. **Analyses added after the protocol was frozen.** The selective comparison
+   at matched coverage, the out-of-fold comparison of candidate attribute
+   pairs, the out-of-fold effect of the binning rule and the per-polymer
+   coverage breakdown were added in response to external review. They are
+   confirmatory analyses of an already-fitted model: no model was refitted
+   with knowledge of a test fold, and every one of them uses the folds of the
+   original run.

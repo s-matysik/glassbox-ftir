@@ -244,9 +244,9 @@ def build_document(stats):
               "Table S2. Rule confidence by attribute, with interval and significance count.")
 
     doc_add(doc, "S4. Attribution ranking, fit by fit", size=12, bold=True, space_after=4)
-    doc_add(doc, "Section V reports that the attribute set selected by the rule was identical "
-                 "in all twenty refits while the top three attributes of the attribution "
-                 "method changed in one repeat in five. Fig. S4 shows the underlying "
+    doc_add(doc, "Section V reports that the attribute set selected by the rule was the same "
+                 "in 19 of 20 refits while the top three attributes of the attribution "
+                 "method changed in one repeat in ten. Fig. S4 shows the underlying "
                  "trajectories rather than the summary. Across the twenty fits the attribution "
                  f"produced {stats['n_top3']} distinct top-three sets against "
                  f"{stats['n_sets']} distinct selection{'' if stats['n_sets'] == 1 else 's'} by the "
@@ -259,9 +259,27 @@ def build_document(stats):
     doc_add(doc, "Fig. S4. Rank assigned to each attribute by the attribution method, fit by "
                  "fit. Lower is more important.", size=8, italic=True, space_after=10)
 
-    doc_add(doc, "S5. Computational cost and the fold-level record", size=12, bold=True,
+    doc_add(doc, "S5. Who gets referred", size=12, bold=True, space_after=4)
+    doc_add(doc, "The referral rate of 0.247 reported in the article is an average over six "
+                 "polymers whose individual rates differ by more than an order of magnitude. "
+                 "Table S3 gives the breakdown. The rule accepts almost every specimen of "
+                 "poly(ethylene terephthalate) and poly(vinyl chloride), both of which carry a "
+                 "band the other classes lack, and refers two thirds of low-density "
+                 "polyethylene, which differs from the high-density grade by chain branching "
+                 "alone. Any deployment that is dominated by polyolefins should therefore "
+                 "expect a far higher referral rate than the headline figure, and any "
+                 "deployment dominated by bottle-grade polyester a far lower one. Recall "
+                 "among accepted specimens is 0.9916 or better in every class, so the "
+                 "refusals are placed where the evidence is weak and not scattered at random.",
+            space_after=6)
+    doc_table(doc, stats["per_cov"][0], stats["per_cov"][1],
+              "Table S3. Coverage and recall by polymer, out of fold.",
+              note="Coverage is the share of that polymer the rule accepts; recall among "
+                   "accepted specimens is computed on that subset only.")
+
+    doc_add(doc, "S6. Computational cost and the fold-level record", size=12, bold=True,
             space_after=4)
-    doc_add(doc, "Table S3 gives the fold-level record behind Table 2, including the attribute "
+    doc_add(doc, "Table S4 gives the fold-level record behind Table 2, including the attribute "
                  "pair selected inside each fold, the quality of approximation on the training "
                  "part, the number of cells and the wall-clock cost. Two things in it are "
                  "worth a reviewer's attention. The attribute pair selected inside the folds "
@@ -273,15 +291,15 @@ def build_document(stats):
                  "protocol specifies, and states that deviation in its limitations.",
             size=9.5)
     doc_table(doc, stats["folds"][0], stats["folds"][1],
-              "Table S3. Fold-level record of the primary cross-validation.",
+              "Table S4. Fold-level record of the primary cross-validation.",
               note="Seconds are wall-clock on one core, including the baselines.")
 
-    doc_add(doc, "S6. Released files", size=12, bold=True, space_after=4)
+    doc_add(doc, "S7. Released files", size=12, bold=True, space_after=4)
     doc_add(doc, "The following computed tables are released alongside the article and are the "
                  "direct source of the figures and tables named beside each. They are plain "
                  "comma-separated files with a header row.", size=9.5)
     doc_table(doc, ["File", "Rows", "What it holds", "Used by"], stats["files"],
-              "Table S4. Computed data files released with the article.")
+              "Table S5. Computed data files released with the article.")
 
     out = os.path.join(DOCS, "Supplementary_Material.docx")
     doc.save(out)
@@ -314,37 +332,59 @@ def main():
                f"{r.bacc_glassbox_forced:.4f}", f"{r.bacc_glassbox_covered:.4f}",
                f"{r.secs_total:.0f}"] for r in fs.itertuples()])
 
-    files = [
-        ["cv_parity_folds.csv", 6, "Balanced accuracy per method with fold-level intervals",
-         "Table 2, Fig. 3"],
-        ["cv_per_class.csv", 36, "Per-class sensitivity and specificity per method",
-         "Table S1, Fig. S1"],
-        ["cv_fold_scores.csv", 5, "Fold-level record: selection, cells, coverage, timing",
-         "Table S3"],
-        ["rough_sets.csv", 270, "Approximation quality for every attribute set and variant",
-         "Table 3, Fig. 8"],
-        ["rule_matrix.csv", 144, "Every mined rule with interval, permutation p and q value",
-         "Table 4, Fig. 4, Table S2"],
-        ["ovl_matrix.csv", 189, "Overlap coefficient for every attribute and polymer pair",
-         "Fig. 5, Fig. S2"],
-        ["learning_curves.csv", 24, "Accuracy against training size for every method",
-         "Table 6, Fig. 6"],
-        ["shap_stability.csv", 2, "Rank-correlation summary of attribution stability",
-         "Table 7"],
-        ["shap_ranks_per_repeat.csv", 20, "Attribution rank of each attribute, fit by fit",
-         "Fig. 7, Fig. S4"],
-        ["oc_curves.csv", 240, "Operating characteristic for each plan and inspector",
-         "Fig. 10"],
-        ["oc_risk.csv", 8, "Producer and consumer risk for four sampling plans", "Table 8"],
-        ["pair_cap_sensitivity.csv", 301, "Rule confidence under every open protocol choice",
-         "Table 5, Fig. 9"],
-        ["entry_condition_primary.csv", 6, "Between-specimen spread against detection threshold",
-         "Fig. 2"],
+    inventory = [
+        ("cv_parity_folds.csv", "Balanced accuracy per method with fold-level intervals",
+         "Table 2, Fig. 3"),
+        ("cv_per_class.csv", "Per-class sensitivity and specificity per method",
+         "Table S1, Fig. S1"),
+        ("cv_fold_scores.csv", "Fold-level record: selection, cells, coverage, timing",
+         "Table S3"),
+        ("rough_sets.csv", "Approximation quality for every attribute set and variant",
+         "Table 3, Fig. 8"),
+        ("rule_matrix.csv", "Every mined rule with interval, permutation p and q value",
+         "Table 4, Fig. 4, Table S2"),
+        ("ovl_matrix.csv", "Overlap coefficient for every attribute and polymer pair",
+         "Fig. 5, Fig. S2"),
+        ("learning_curves.csv", "Accuracy against training size for every method",
+         "Table 6, Fig. 6"),
+        ("shap_stability.csv", "Rank-correlation summary of attribution stability",
+         "Table 7"),
+        ("shap_ranks_per_repeat.csv", "Attribution rank of each attribute, fit by fit",
+         "Fig. 7, Fig. S4"),
+        ("oc_curves.csv", "Operating characteristic for each plan and inspector", "Fig. 10"),
+        ("oc_risk.csv", "Producer and consumer risk for four sampling plans", "Table 8"),
+        ("pair_cap_sensitivity.csv", "Rule confidence under every open protocol choice",
+         "Table 5, Fig. 9"),
+        ("entry_condition_primary.csv", "Between-specimen spread against instrument noise",
+         "Fig. 2"),
+        ("parity_test.csv", "Paired test of the forced-choice difference", "Section V"),
+        ("non_inferiority_test.csv", "Non-inferiority test at a one-point margin",
+         "Section V"),
+        ("selective_comparison.csv", "Every classifier under the same referral budget",
+         "Table 9"),
+        ("pareto_pairs.csv", "Candidate attribute pairs evaluated out of fold", "Table 10"),
+        ("binning_out_of_fold.csv", "Coverage and accuracy under each binning rule",
+         "Table 11"),
+        ("accepted_per_class.csv", "Coverage and recall per polymer", "Table S5"),
     ]
+    # Row counts are read from the files, never written by hand, so this
+    # inventory cannot drift away from what is actually released.
+    files = [[name, len(pd.read_csv(os.path.join(RES, name))), what, used]
+             for name, what, used in inventory
+             if os.path.exists(os.path.join(RES, name))]
+
+    acc = pd.read_csv(os.path.join(RES, "accepted_per_class.csv"))
+    per_cov = (["Polymer", "Accepted of 500", "Coverage", "Recall, forced", "Recall, accepted"],
+               [[r.polymer, int(r.n_accepted), f"{r.coverage:.3f}",
+                 f"{r.recall_forced:.4f}", f"{r.recall_accepted:.4f}"]
+                for r in acc.itertuples()])
+
+    sl = pd.read_csv(os.path.join(RES, "selective_comparison.csv"))
+    sl = sl[sl.regime == "own reject option at matched coverage"]
 
     stats = {"worst_poly": worst_poly, "worst_sens": worst_sens, "best_attr": best_attr,
              "best_ovl": best_ovl, "n_sep": n_sep, "n_top3": n_top3, "n_sets": n_sets,
-             "per_class": per_class, "rules": rules_tab, "folds": folds, "files": files,
+             "per_class": per_class, "per_cov": per_cov, "rules": rules_tab, "folds": folds, "files": files,
              "total_min": float(fs.secs_total.sum()) / 60}
     out = build_document(stats)
     print(f"saved {out}")

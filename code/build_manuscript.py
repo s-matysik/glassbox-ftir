@@ -187,8 +187,22 @@ def continuous_section(doc, n_cols):
 def add_wide_figure(doc, filename, number, caption):
     """A figure wider than one column spans the page, as in the journal."""
     continuous_section(doc, 1)
-    add_figure(doc, filename, number, caption, width_in=6.9)
+    add_figure(doc, filename, number, caption, width_in=6.4)
     continuous_section(doc, 2)
+
+
+def fix_footer(doc):
+    """The template ships a placeholder footer naming a volume and a year that
+    belong to the sample document. Replace it with the current one."""
+    for s in doc.sections:
+        for p in list(s.footer.paragraphs) + list(s.header.paragraphs):
+            if "VOLUME" in p.text.upper() or "2017" in p.text:
+                for r in p.runs:
+                    r.text = ""
+                if p.runs:
+                    p.runs[0].text = "VOLUME 14, 2026"
+                else:
+                    p.add_run("VOLUME 14, 2026")
 
 
 def main():
@@ -250,6 +264,7 @@ def main():
         add_runs(doc, [(bio["name"].upper() + " ", True, False), (bio["text"], False, False)], "bio")
 
     moved = tidy_styles(doc)
+    fix_footer(doc)
     doc.save(OUT)
     words = sum(len(p.text.split()) for p in doc.paragraphs)
     print(f"saved {OUT} | paragraphs restyled out of Normal: {moved}")
