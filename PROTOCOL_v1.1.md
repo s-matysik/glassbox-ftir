@@ -104,7 +104,8 @@ fixed conditions, so the following substitution is fixed here:
 
 Entry condition, computed before the freeze on the primary dataset: between-
 specimen standard deviation exceeds the instrument-noise estimate by a factor
-of 25.3 to 57.2 depending on polymer. The condition is satisfied with margin.
+of 25.3 to 57.2 depending on polymer (superseded; see Deviations, item 4).
+The condition is satisfied with margin.
 
 ## 5. Features
 
@@ -197,9 +198,9 @@ execution departed from it, with the reason.
    baseline at every size, so no crossover occurs.
 3. **Attribute-selection criterion.** The protocol does not state which of two
    defensible criteria selects the condition attributes. The validated
-   classifier uses inner cross-validated balanced accuracy; Table III of the
+   classifier uses inner cross-validated balanced accuracy; Table 3 of the
    article reports the pair that maximises the training-set quality of
-   approximation. The two disagree. Table X settles the disagreement out of
+   approximation. The two disagree. Table 10 settles the disagreement out of
    fold in favour of the cross-validated criterion, and both are reported.
 4. **Noise estimate in the entry condition.** The ratio quoted in an early
    draft, 25.3 to 57.2, came from an ad hoc calculation. The released figure,

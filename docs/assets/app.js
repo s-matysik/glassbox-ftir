@@ -78,13 +78,16 @@
     var svm = par.filter(function (r) { return r.method === "svm_rbf"; })[0];
     var gset = toObjs(D.rough.by_set)[0];
     var sh = st.filter(function (r) { return /post-hoc/.test(r.representation); })[0];
+    var sm = toObjs(D.selective.stability_matched);
+    var gbsel = sm.filter(function (r) { return /selected attributes/.test(r.selector); })[0];
+    var shap2 = sm.filter(function (r) { return /attribution/.test(r.selector) && r.set_size === 2; })[0];
     var cards = [
       { v: GB.nice(cov.bacc_mean, 4), k: "balanced accuracy on accepted specimens", c: "ok" },
       { v: (cov.coverage_mean * 100).toFixed(1) + "%", k: "specimens the rule accepts" },
       { v: GB.nice(svm.bacc_mean, 4), k: "strongest black box, all specimens" },
-      { v: GB.nice(gset.gamma, 4), k: "decided with certainty by two attributes", c: "ok" },
-      { v: "20 / 20", k: "repeats with an unchanged attribute set", c: "ok" },
-      { v: (sh.modal_set_share * 100).toFixed(0) + "%", k: "repeats with an unchanged attribution top three", c: "warn" }
+      { v: GB.nice(gset.gamma, 4), k: "cells unambiguous in training, best pair", c: "ok" },
+      { v: gbsel.modal_share * 20 + " / 20", k: "repeats with an unchanged attribute pair", c: "ok" },
+      { v: shap2.modal_share * 20 + " / 20", k: "repeats with an unchanged attribution top pair" }
     ];
     var g = document.createElement("div");
     g.className = "stat-grid";
@@ -117,7 +120,8 @@
       file: "spectra",
       cap: "The three windows are fixed before any data is seen: <b>W1</b> 2800 to 3000 cm-1 carbon-hydrogen stretching, " +
         "<b>W2</b> 1650 to 1800 cm-1 carbonyl, <b>W3</b> 1350 to 1500 cm-1 methylene and methyl deformation. " +
-        "Nine attributes are the amplitude, the shape correlation and the baseline offset of each window.",
+        "Nine attributes are the amplitude, the shape correlation and the baseline offset of each window. " +
+        "Corresponds to Figure 1 of the article.",
       csv: function () {
         var cols = ["wavenumber_cm-1"].concat(state.poly.map(function (x) { return x + "_mean"; }));
         return {
@@ -172,7 +176,7 @@
       file: "decision",
       cap: "A specimen is <b>decided</b> when its cell of the attribute grid contains only one polymer, and <b>referred</b> otherwise. " +
         "Cell width is the attribute's own detection threshold, so two specimens share a cell exactly when the instrument cannot tell them apart. " +
-        "Corresponds to Table III of the article.",
+        "Corresponds to Table 3 of the article.",
       csv: function () { return D.rough.by_polymer; }
     });
     control(p.controls, "attribute set", select(
@@ -216,7 +220,7 @@
       file: "parity",
       cap: "The glass box appears twice. Forced to decide every specimen it is <b>0.052</b> behind the strongest baseline, " +
         "a difference that is statistically significant. Allowed to refer, it reaches parity on the <b>75.3 percent</b> it accepts. " +
-        "Corresponds to Figure 2 and Table II of the article.",
+        "Corresponds to Figure 3 and Table 2 of the article.",
       csv: function () { return D.parity; }
     });
     rows.sort(function (a, b) { return a.bacc_mean - b.bacc_mean; });
@@ -242,7 +246,7 @@
       file: "rules",
       cap: "Each cell is a rule mined over pairs of specimens that differ in polymer and agree on everything else. " +
         "Hover for the Wilson interval, the pair count and the false-discovery-rate q value. " +
-        "Corresponds to Figure 3 and Table IV of the article.",
+        "Corresponds to Figure 4 and Table 4 of the article.",
       csv: function () { return D.rules; }
     });
     function draw() {
@@ -289,7 +293,7 @@
       sub: "Overlap coefficient between the distributions of two polymers, by attribute.",
       file: "overlap",
       cap: "Zero means the two distributions do not overlap at all; one means they are indistinguishable. " +
-        "Corresponds to Figure 4 of the article.",
+        "Corresponds to Figure 5 of the article.",
       csv: function () { return D.ovl; }
     });
     var mode = "median";
@@ -346,7 +350,7 @@
       file: "learning",
       cap: "Interpretable models are often claimed to need less data. Here the glass box is behind at every size and " +
         "there is no crossover: the gap widens slightly from 1 to 2 percent and then narrows steadily. " +
-        "Corresponds to Figure 5 and Table VI of the article.",
+        "Corresponds to Figure 6 and Table 6 of the article.",
       csv: function () { return D.learning; }
     });
     function draw() {
@@ -394,7 +398,7 @@
       file: "stability",
       cap: "Left: the rank each attribute receives from post-hoc attribution, fit by fit. Right: the attribute set the rule selects. " +
         "The attribution ranking is reasonably stable overall, but its top three changes in one repeat in ten, " +
-        "while the rule selects the same pair in 19 of 20 fits. Corresponds to Figure 6 and Table VII of the article.",
+        "while the rule selects the same pair in 19 of 20 fits. Corresponds to Figure 7 and Table 7 of the article.",
       csv: function () { return D.stability.ranks; }
     });
     var sh = sum.filter(function (r) { return /post-hoc/.test(r.representation); })[0];
@@ -451,7 +455,7 @@
       cap: "Given a reject option of their own, the margin-based baselines are perfect on the specimens they keep, " +
         "while the rule reaches <b>0.9973</b>. Selective accuracy is therefore not the advantage: the advantage is " +
         "that the refusal itself is stated in named spectral quantities. The measured cost at equal coverage is " +
-        "<b>0.0027</b> balanced accuracy. Corresponds to Table IX of the article.",
+        "<b>0.0027</b> balanced accuracy. Corresponds to Table 9 of the article.",
       csv: function () { return D.selective.matched; }
     });
     own.sort(function (a, b) { return a.balanced_accuracy - b.balanced_accuracy; });
@@ -530,7 +534,7 @@
       file: "acceptance",
       cap: "An imperfect test shifts the whole curve. At a one percent defective fraction the supplier of conforming material " +
         "carries almost the entire cost, while the buyer's protection barely changes. A referral outcome routes the ambiguous " +
-        "specimen to a second test instead of rejecting the lot. Corresponds to Figure 7 and Table VIII of the article.",
+        "specimen to a second test instead of rejecting the lot. Corresponds to Figure 10 and Table 8 of the article.",
       csv: function () { return D.oc; }
     });
     control(p.controls, "sampling plan", select(
@@ -579,7 +583,7 @@
       sub: "Between-specimen spread divided by the instrument noise standard deviation.",
       file: "entry",
       cap: "Below about one the method cannot work at all, because real differences are smaller than what the instrument " +
-        "produces by itself. Corresponds to Figure 1 of the article.",
+        "produces by itself. Corresponds to Figure 2 of the article.",
       csv: function () { return D.entry; }
     });
     GB.barsH(p.plot, ent.filter(function (r) { return state.poly.indexOf(r.stratum) >= 0; }).map(function (r) {
@@ -590,14 +594,14 @@
           "<br>spread / noise " + GB.nice(r.spread_over_noise, 1) +
           "<br>spread / threshold " + GB.nice(r.spread_over_threshold, 1)
       };
-    }), { xlab: "between-specimen spread / detection threshold", left: 86 });
+    }), { xlab: "between-specimen spread / instrument noise", left: 86 });
 
     var p2 = panel({
       title: "Sensitivity to the protocol's open choices",
       sub: "Headline rule confidence under every setting the frozen protocol left variable.",
       file: "sensitivity",
       cap: "Varying the pair sampling cap, the threshold multiplier k and the spectral resolution moves the result by " +
-        "less than two percentage points. Corresponds to Table V of the article.",
+        "less than two percentage points. Corresponds to Table 5 of the article.",
       csv: function () { return D.sensitivity; }
     });
     var conf = sens.filter(function (r) { return r.metric === "conf_change" && r.attribute === "A_W1"; });

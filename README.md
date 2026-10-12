@@ -92,35 +92,52 @@ change.
 
 ## Honest limitations
 
-These belong in any manuscript built on this material.
+The full list is Section VII of the article. The ones that matter most to
+anyone reusing this code:
 
-- The action rules in concepts 2 and 3 are mined over object pairs and are
-  symmetric by construction: the same confidence appears in both directions.
-  They are evidence of association under held-fixed covariates, not of
-  direction. Pairs are also not independent, since one object enters many
-  pairs, so the pair count is not a sample size.
-- Concept 3 has a single reporting year, so no temporal validation is possible,
-  and large strata are subsampled to 260 records before pairing.
-- Concept 4 rests on 50 buildings at one site, of which 32 are offices. The
-  entry condition and the channel analysis use 144 buildings; the
-  identification contrast uses the smaller rated subset. Why most buildings
-  carry a non-numeric rating is not characterised.
-- In concepts 1 and 2, 138 of 164 spectra come from one recovery matrix, and
-  the identification test is binary, polyethylene against polypropylene.
-- The validation deposit referenced in concept 1 covers different polymer
-  classes, so it validates the procedure and not the methyl-band result.
-- The required-reliability expression is derived here rather than taken from
-  the literature, and should be checked against prior work before it is
-  claimed as novel.
+- One repetition of five-fold cross-validation was run, not the twenty the
+  protocol specifies. Intervals are across the five folds of that repetition
+  and therefore carry no between-repetition component. The comparison with the
+  strongest baseline does carry the Nadeau-Bengio variance correction.
+- Rules are mined over specimen pairs and are symmetric by construction: the
+  same confidence appears in both directions. They are evidence of association
+  under held-fixed parameters, not of direction. Pairs are not independent,
+  since one specimen enters many pairs, so the pair count is not a sample size
+  and the per-rule intervals should be read with that in mind.
+- The primary dataset is one instrument and one laboratory, and its specimens
+  are pristine industrial polymers. The recyclate archive is included only as a
+  transfer case, and its polymer labels are the output of library matching
+  rather than independent measurement.
+- In the baseline pipelines the feature scaling is estimated on the whole
+  training fold before the inner split used for tuning. Outer estimates are
+  unaffected; the tuned hyperparameters are mildly optimistic for the
+  baselines, which biases the comparison against the rule.
+- Learning curves cover all eight training fractions for the glass box, SVM,
+  random forest and PLS-DA. The convolutional network was run at 75% and 100%
+  only.
+- The acceptance-sampling section is a scenario analysis. It maps measured
+  classification error onto standard sampling plans; it is not a measurement of
+  risk in any real inspection regime.
 
 ## Data sources
 
-| Folder | Zenodo record | Licence |
-|---|---|---|
-| `data_raw/ftir` | 10.5281/zenodo.21822279 | CC BY 4.0 |
-| `data_raw/industrial_co2` | 10.5281/zenodo.20767361 | CC BY 4.0 |
-| `data_raw/choice_experiment` | 10.5281/zenodo.21740286 | CC BY 4.0 |
-| `data_raw/buildings` | 10.5281/zenodo.3887306 | CC BY 4.0 |
+| Folder | Zenodo record | Role | Licence |
+|---|---|---|---|
+| `data_raw/ftir_plastics` | 10.5281/zenodo.10736650 | primary dataset, 3000 specimens | CC BY 4.0 |
+| `data_raw/recyclate` | 10.5281/zenodo.21822279 | transfer case | CC BY 4.0 |
 
-Each folder carries a `zenodo_record.json` with the title, DOI, licence,
-publication date and file listing as retrieved.
+`code/00_download_data.py` fetches both by record identifier and writes a
+`zenodo_record.json` beside each with the title, DOI, licence, publication date
+and file listing as retrieved, so the download can be checked rather than
+trusted.
+
+## What this repository does not contain
+
+- The prose sources of the manuscript (`docs/manuscript_part*.json`) are
+  withheld until the article is published. Everything the prose quotes is here:
+  the scripts, the frozen protocol and every result table. The assembly step
+  `code/22_assemble_manuscript.py` and `code/build_manuscript.py` will
+  therefore not run from a clean clone.
+- The publisher's Word template is under IEEE copyright and is not
+  redistributed. It is obtained from the journal's author-resources page and
+  placed in `docs/` under its original name.

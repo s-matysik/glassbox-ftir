@@ -1,0 +1,5 @@
+﻿selector,set_size,repeats,modal_set,modal_share,n_distinct_sets,jaccard_mean,jaccard_min
+"glass box, alternative criterion",2,20,"O_W1, O_W2",1.0,1,1.0,1.0
+"glass box, selected attributes",2,20,"A_W2, C_W3",0.95,2,0.9333,0.3333
+"post-hoc attribution, top k",2,20,"A_W1, C_W3",1.0,1,1.0,1.0
+"post-hoc attribution, top k",3,20,"A_W1, C_W1, C_W3",0.9,2,0.9053,0.5

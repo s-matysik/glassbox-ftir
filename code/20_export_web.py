@@ -72,7 +72,6 @@ def main():
     sizes["spectra.json"] = write("spectra.json", spectra())
 
     par = pd.read_csv(os.path.join(RES, "cv_parity_folds.csv"))
-    par["ci_high"] = par.ci_high.clip(upper=1.0)
     sizes["parity.json"] = write("parity.json", frame(par))
 
     rs = pd.read_csv(os.path.join(RES, "rough_sets.csv"))
@@ -113,10 +112,11 @@ def main():
     sel = pd.read_csv(os.path.join(RES, "selective_comparison.csv"))
     par = pd.read_csv(os.path.join(RES, "pareto_pairs.csv"))
     binn = pd.read_csv(os.path.join(RES, "binning_out_of_fold.csv"))
+    sm = pd.read_csv(os.path.join(RES, "stability_matched.csv"))
     acc = pd.read_csv(os.path.join(RES, "accepted_per_class.csv"))
     sizes["selective.json"] = write("selective.json",
                                     {"matched": frame(sel), "pairs": frame(par),
-                                     "binning": frame(binn), "per_class": frame(acc)})
+                                     "binning": frame(binn), "stability_matched": frame(sm), "per_class": frame(acc)})
 
     total = sum(sizes.values())
     for k, v in sorted(sizes.items()):

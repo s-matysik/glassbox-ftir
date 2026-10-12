@@ -205,7 +205,7 @@ def build_document(stats):
                  "The glass box is shown in forced-choice mode so that the comparison is "
                  "like for like.", size=8, italic=True, space_after=10)
     doc_table(doc, stats["per_class"][0], stats["per_class"][1],
-              "Table S1. Per-class sensitivity and specificity, five-fold cross-validation. Intervals are percentile bootstrap over specimens, not binomial. For the covered mode the denominator is the number of accepted specimens of that class, not 500.")
+              "Table S1. Per-class sensitivity and specificity, five-fold cross-validation, every method in the fold record. Intervals are percentile bootstrap over specimens except for the referral mode, where they are Wilson intervals on recall among accepted specimens and the denominator is the number accepted rather than 500.")
 
     doc_add(doc, "S2. Separation of every attribute on every polymer pair", size=12,
             bold=True, space_after=4)
@@ -313,11 +313,40 @@ def main():
     rules = supp3_rule_intervals()
     n_top3, n_sets = supp4_attribution_ranks()
 
+    # Every method in the fold record is published, not a subset. The earlier
+    # version filtered on "glassbox_covered", a label this file does not use --
+    # the covered mode is recorded as "glassbox_three_way" -- so the table
+    # silently lost the referral mode and three of the four baselines.
+    NICE_M = {"glassbox_forced": "glass box, forced",
+              "glassbox_three_way": "glass box, with referral",
+              "svm_rbf": "SVM, radial basis function",
+              "random_forest": "random forest", "plsda": "PLS-DA",
+              "cnn1d": "1-D convolutional network"}
     pc = pd.read_csv(os.path.join(RES, "cv_per_class.csv"))
-    pc = pc[pc.method.isin(["glassbox_forced", "glassbox_covered", "svm_rbf"])]
+    # The referral mode has no bootstrap interval in the fold record, and its
+    # denominator there is the whole class rather than the specimens it
+    # accepted. Both are repaired from the acceptance record with a Wilson
+    # interval on recall among accepted specimens, which is bounded by
+    # construction and is labelled as a different estimator in the caption.
+    ap = pd.read_csv(os.path.join(RES, "accepted_per_class.csv")).set_index("polymer")
+    z = 1.959963985
+    for i_, r_ in pc[pc.method == "glassbox_three_way"].iterrows():
+        n_ = int(ap.loc[r_.polymer, "n_accepted"])
+        p_ = float(ap.loc[r_.polymer, "recall_accepted"])
+        c_ = 1.0 + z * z / n_
+        centre = (p_ + z * z / (2 * n_)) / c_
+        half = z * np.sqrt(p_ * (1 - p_) / n_ + z * z / (4 * n_ * n_)) / c_
+        pc.loc[i_, ["n_specimens", "sensitivity", "sens_ci_low", "sens_ci_high"]] = [
+            n_, p_, max(0.0, centre - half), min(1.0, centre + half)]
+    missing = set(pc.method) - set(NICE_M)
+    assert not missing, f"unlabelled method in cv_per_class.csv: {sorted(missing)}"
+    pc["order"] = pc.method.map({k: i for i, k in enumerate(NICE_M)})
+    pc = pc.sort_values(["order", "polymer"])
     per_class = (["Method", "Polymer", "n tested", "Sensitivity", "95% bootstrap interval", "Specificity"],
-                 [[r.method.replace("_", " "), r.polymer, int(r.n_specimens),
-                   f"{r.sensitivity:.3f}", f"{r.sens_ci_low:.3f} to {r.sens_ci_high:.3f}",
+                 [[NICE_M[r.method], r.polymer, int(r.n_specimens),
+                   f"{r.sensitivity:.3f}",
+                   "not estimated" if pd.isna(r.sens_ci_low)
+                   else f"{r.sens_ci_low:.3f} to {r.sens_ci_high:.3f}",
                    f"{r.specificity:.4f}"] for r in pc.itertuples()])
 
     rules_tab = (["Attribute", "Confidence", "Wilson interval", "Significant pairs"],
@@ -333,12 +362,12 @@ def main():
                f"{r.secs_total:.0f}"] for r in fs.itertuples()])
 
     inventory = [
-        ("cv_parity_folds.csv", "Balanced accuracy per method with fold-level intervals",
+        ("cv_parity_folds.csv", "Balanced accuracy per method with logit-scale fold intervals",
          "Table 2, Fig. 3"),
         ("cv_per_class.csv", "Per-class sensitivity and specificity per method",
          "Table S1, Fig. S1"),
         ("cv_fold_scores.csv", "Fold-level record: selection, cells, coverage, timing",
-         "Table S3"),
+         "Table S4"),
         ("rough_sets.csv", "Approximation quality for every attribute set and variant",
          "Table 3, Fig. 8"),
         ("rule_matrix.csv", "Every mined rule with interval, permutation p and q value",
@@ -365,7 +394,7 @@ def main():
         ("pareto_pairs.csv", "Candidate attribute pairs evaluated out of fold", "Table 10"),
         ("binning_out_of_fold.csv", "Coverage and accuracy under each binning rule",
          "Table 11"),
-        ("accepted_per_class.csv", "Coverage and recall per polymer", "Table S5"),
+        ("accepted_per_class.csv", "Coverage and recall per polymer", "Table S3"),
     ]
     # Row counts are read from the files, never written by hand, so this
     # inventory cannot drift away from what is actually released.

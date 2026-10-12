@@ -192,17 +192,19 @@ def add_wide_figure(doc, filename, number, caption):
 
 
 def fix_footer(doc):
-    """The template ships a placeholder footer naming a volume and a year that
-    belong to the sample document. Replace it with the current one."""
+    """Clear the template's placeholder footer.
+
+    The template ships a footer naming a volume and year that belong to the
+    sample document. Writing a volume number of our own would be worse: a
+    submitted manuscript has no volume, and a footer that supplies one reads as
+    though the article were already published. The footer is therefore emptied
+    and the journal typesets its own.
+    """
     for s in doc.sections:
         for p in list(s.footer.paragraphs) + list(s.header.paragraphs):
             if "VOLUME" in p.text.upper() or "2017" in p.text:
                 for r in p.runs:
                     r.text = ""
-                if p.runs:
-                    p.runs[0].text = "VOLUME 14, 2026"
-                else:
-                    p.add_run("VOLUME 14, 2026")
 
 
 def main():

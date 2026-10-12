@@ -43,7 +43,7 @@ FIGMAP = [("matys2.png", "Entry condition on the primary dataset. The ratio of b
           ("matys11.png", "Headline rule confidence under every choice the frozen protocol left "
            "open: the pair sampling cap, the threshold multiplier and the spectral resolution. "
            "The fourth open choice, the binning rule, moves the result far more than these three "
-           "and is reported separately in Table IX and in Section VI.")]
+           "and is reported separately in Table 11 and in Section IV-H.")]
 
 
 def t(df, cols, rename=None, fmt=4):
@@ -60,7 +60,6 @@ def tables():
     out = {}
 
     par = pd.read_csv(os.path.join(RES, "cv_parity_folds.csv"))
-    par["ci_high"] = par.ci_high.clip(upper=1.0)
     nice = {"glassbox_forced": "Glass box, forced choice",
             "glassbox_covered": "Glass box, accepted specimens",
             "svm_rbf": "SVM, radial basis function", "random_forest": "Random forest",
@@ -161,13 +160,30 @@ def tables():
                          "coverage": "Coverage", "recall_forced": "Recall, forced choice",
                          "recall_accepted": "Recall, accepted only"})
 
+    # Table 7 reports the matched-size comparison, because set size affects
+    # every set-stability measure and the two selectors return sets of
+    # different size by default.
+    sm = pd.read_csv(os.path.join(RES, "stability_matched.csv"))
+    sm = sm[sm.selector != "glass box, alternative criterion"].copy()
+    sm["selector"] = sm.apply(
+        lambda r: f"{r.selector.replace(', top k', '')}, {r.set_size} attributes", axis=1)
+    sm["modal_share"] = sm.modal_share.map(lambda v: f"{v:.2f}")
+    sm["jaccard_mean"] = sm.jaccard_mean.map(lambda v: f"{v:.4f}")
+    out["stability"] = t(sm, ["selector", "repeats", "modal_set", "modal_share",
+                              "n_distinct_sets", "jaccard_mean"],
+                         {"selector": "Selector and set size", "repeats": "Repeated fits",
+                          "modal_set": "Most frequent set",
+                          "modal_share": "Share of repeats with it",
+                          "n_distinct_sets": "Distinct sets",
+                          "jaccard_mean": "Mean pairwise Jaccard"})
+
     st = pd.read_csv(os.path.join(RES, "shap_stability.csv"))
-    out["stability"] = t(st, ["representation", "repeats", "kendall_tau_mean",
-                              "modal_set_share", "n_distinct_sets"],
-                         {"representation": "Representation", "repeats": "Repeated fits",
-                          "kendall_tau_mean": "Mean rank correlation",
-                          "modal_set_share": "Share of repeats with modal set",
-                          "n_distinct_sets": "Distinct sets"})
+    tau = st[st.kendall_tau_mean.notna()].iloc[0]
+    out["stability_note"] = (
+        "Rank correlation of the full attribution ordering over the same twenty fits: "
+        f"mean Kendall tau {tau.kendall_tau_mean:.4f}, minimum {tau.kendall_tau_min:.4f}. "
+        "At matched size of two the attribution is the more stable selector; the rule's "
+        "advantage is not stability but that the selected pair is itself the decision.")
     return out
 
 
@@ -221,11 +237,52 @@ def renumber_figures(sections):
     return n
 
 
-SELECTIVE_PARA = 'Two names are used for the same quantity below and are fixed here: coverage is the share of specimens on which the rule issues a verdict, and the referral rate is one minus coverage. Both are given as percentages in the text and as proportions in the tables. A classifier that may abstain is not comparable with one that may not, so the comparison in Table II is deliberately conservative towards the rule: the baselines are evaluated on every specimen. Two sharper comparisons are available and both are reported here, because a reader will otherwise ask for them. Restricted to exactly the specimens the rule accepts, the baselines do not get worse, they get better: the radial-basis support vector machine is perfect on that subset, and the other three exceed their own all-specimen figures. The same holds when each baseline is given a reject option of its own. Abstaining on the specimens where the margin between its two highest-scoring classes is smallest, until it reaches the same coverage, every margin-based baseline is also perfect. The rule reaches 0.9973 under the same budget. The conclusion this forces bounds what the article claims, so it is worth stating plainly. Referral does not make the rule more accurate than a black box, and a black box with a confidence threshold attains a slightly higher selective accuracy. What the rule provides that they do not is that both halves of its output, the verdict and the refusal, are expressed in the same named physical quantities, so each can be written into a specification and contested. The measured cost of that property at matched coverage is 0.0027 balanced accuracy.'
+SELECTIVE_PARA = 'Two names are used for the same quantity below and are fixed here: coverage is the share of specimens on which the rule issues a verdict, and the referral rate is one minus coverage. Both are given as percentages in the text and as proportions in the tables. A classifier that may abstain is not comparable with one that may not, so the comparison in Table 2 is deliberately conservative towards the rule: the baselines are evaluated on every specimen. Two sharper comparisons are available and both are reported here, because a reader will otherwise ask for them. Restricted to exactly the specimens the rule accepts, the baselines do not get worse, they get better: the radial-basis support vector machine is perfect on that subset, and the other three exceed their own all-specimen figures. The same holds when each baseline is given a reject option of its own. Abstaining on the specimens where the margin between its two highest-scoring classes is smallest, until it reaches the same coverage, every margin-based baseline is also perfect. The rule reaches 0.9973 under the same budget. The conclusion this forces bounds what the article claims, so it is worth stating plainly. Referral does not make the rule more accurate than a black box, and a black box with a confidence threshold attains a slightly higher selective accuracy. What the rule provides that they do not is that both halves of its output, the verdict and the refusal, are expressed in the same named physical quantities, so each can be written into a specification and contested. The measured cost of that property at matched coverage is 0.0027 balanced accuracy.'
 
 PERCLASS_PARA = 'The referral is also far from uniform across polymers, and the pattern is the one a spectroscopist would predict. Low-density polyethylene is accepted in only 33.8% of cases and high-density polyethylene in 71.4%, while poly(ethylene terephthalate) and poly(vinyl chloride) are accepted in more than 94%. The two polyolefins differ mainly in branching, which shifts band intensities without introducing a band, so the attributes that separate the other classes leave them in a shared cell. The rule therefore concentrates its refusals where the evidence is weakest, which is the behaviour a referral mechanism should have. It also means that a single referral rate conceals a range from 4.8% to 66.2%, depending on the material. Among accepted specimens recall is 0.9916 or better for every class.'
 
-PARETO_PARA = 'The two selection criteria named in Section V-B can now be separated on evidence. Table X evaluates six candidate pairs under the folds of the main experiment. The pair chosen by inner cross-validation is first on coverage, on accuracy over accepted specimens and on forced-choice accuracy. The pair that maximises the quality of approximation on the training sample ranks fifth of six out of fold, despite having the highest training-set value of that quantity, 0.9153 against 0.7735. Maximising the quality of approximation therefore overfits the training partition, and the disagreement between the criteria is resolved in favour of the cross-validated one. The same applies to the binning rule. Ten equal-width bins do not destroy accuracy, they destroy coverage. Accuracy over accepted specimens rises to 1.0000, while coverage falls from 0.7530 to 0.3043 and forced-choice accuracy from 0.9480 to 0.7327. The binning rule is thus a dial on the referral rate, and the noise-derived setting is the one that keeps three quarters of the specimens decidable.'
+PARETO_PARA = 'The two selection criteria named in Section IV-B can now be separated on evidence. Table 10 evaluates six candidate pairs under the folds of the main experiment. The pair chosen by inner cross-validation is first on coverage, on accuracy over accepted specimens and on forced-choice accuracy. The pair that maximises the quality of approximation on the training sample ranks fifth of six on accuracy over accepted specimens and third of six on the other two measures, despite having the highest training-set value of that quantity, 0.9153 against 0.7735. Maximising the quality of approximation therefore overfits the training partition, and the disagreement between the criteria is resolved in favour of the cross-validated one. The same applies to the binning rule. Table 11 reports the binning rule out of fold. Ten equal-width bins do not destroy accuracy, they destroy coverage. Accuracy over accepted specimens rises to 1.0000, while coverage falls from 0.7530 to 0.3043 and forced-choice accuracy from 0.9480 to 0.7327. The binning rule is thus a dial on the referral rate, and the noise-derived setting is the one that keeps three quarters of the specimens decidable.'
+
+
+def write_bib(order):
+    """Write docs/references.bib for exactly the keys the manuscript cites.
+
+    The earlier file was maintained by hand and had drifted to 56 entries
+    against 77 citations. Generating it from the same row set that produces the
+    printed reference list removes the possibility of disagreement, and the
+    order matches the numbering in the document.
+    """
+    rows = {}
+    with open(os.path.join(DOCS, "references.csv"), encoding="utf-8-sig", newline="") as fh:
+        for row in csv.DictReader(fh):
+            rows[row["key"]] = row
+
+    def esc(s):
+        return s.replace("&", "\\&").replace("%", "\\%").replace("_", "\\_")
+
+    out = ["% Generated by code/22_assemble_manuscript.py -- do not edit by hand.",
+           "% One entry per citation in the manuscript, in order of first appearance.",
+           "% Keys match the 'key' column of docs/references.csv.", ""]
+    for i, key in enumerate(order, 1):
+        r = rows.get(key)
+        if r is None:
+            raise SystemExit(f"cited key not in references.csv: {key}")
+        venue = r["venue"]
+        kind = ("article" if re.search(r"journal|ieee|review|biometrika|nature|science",
+                                       venue, re.I) else "misc")
+        fields = [("author", r["authors"]), ("title", r["title"]), ("year", r["year"])]
+        fields.append(("journal" if kind == "article" else "howpublished", venue))
+        if r["doi"]:
+            fields.append(("doi", r["doi"]))
+        if r["url"] and not r["doi"]:
+            fields.append(("url", r["url"]))
+        body = ",\n".join(f"  {k:<14} = {{{esc(v)}}}" for k, v in fields if v)
+        out.append(f"@{kind}{{{key},  % [{i}]\n{body}\n}}")
+        out.append("")
+    path = os.path.join(DOCS, "references.bib")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(out))
+    print(f"references.bib: {len(order)} entries")
 
 
 def main():
@@ -276,8 +333,10 @@ def main():
     res.append({"type": "figure", "file": FIGMAP[5][0], "number": 7,
                 "caption": FIGMAP[5][1], "width": 7.0})
     res.append({"type": "table", "number": "VII",
-                "caption": "Stability of the representation across twenty repeated fits.",
-                "header": tb["stability"][0], "rows": tb["stability"][1]})
+                "caption": "Stability of the selected attribute set across twenty repeated "
+                           "fits, compared at matched set size.",
+                "header": tb["stability"][0], "rows": tb["stability"][1],
+                "note": tb["stability_note"]})
     res.append({"type": "figure", "file": FIGMAP[8][0], "number": 0,
                 "caption": FIGMAP[8][1], "width": 6.9})
     res.append({"type": "figure", "file": FIGMAP[9][0], "number": 0,
@@ -340,6 +399,7 @@ def main():
     doc["biographies"] = []
     json.dump(doc, open(os.path.join(DOCS, "manuscript.json"), "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
+    write_bib(order)
     print(f"figures {n_figs} | sections {len(sections)} | citations resolved {len(order)} | "
           f"abstract words {len(doc['abstract'].split())}")
     print("cited keys in order:", ", ".join(order[:12]), "...")

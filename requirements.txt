@@ -3,5 +3,6 @@ pandas
 scipy
 scikit-learn
 matplotlib
-openpyxl
-pyreadstat
+torch
+shap
+python-docx

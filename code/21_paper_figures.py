@@ -135,7 +135,6 @@ def fig_parity():
     d["lab"] = d.method.map(nice)
     d = d.rename(columns={"bacc_mean": "balanced_accuracy",
                           "coverage_mean": "coverage"})
-    d["ci_high"] = d.ci_high.clip(upper=1.0)
     d = d.sort_values("balanced_accuracy")
     colours = [WARN if "glass" in m else GREY for m in d.method]
     fig, ax = plt.subplots(figsize=(COL, 2.4))
