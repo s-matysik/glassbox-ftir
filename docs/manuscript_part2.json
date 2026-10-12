@@ -1,0 +1,423 @@
+{
+ "sections": [
+  {
+   "heading": "MATERIALS AND METHOD",
+   "blocks": [
+    {
+     "type": "h2",
+     "text": "PROVENANCE OF THE ALGORITHM"
+    },
+    {
+     "type": "para",
+     "text": "The procedure applied here was not devised for spectroscopy. It was developed for a non-destructive magnetic method that evaluates reinforced concrete, where the task is to say which structural parameter changed when a measured waveform changes, without a labelled training set that pairs the two. Three elements are taken over unchanged. The decomposition of a waveform window into amplitude, correlation and offset, and the selection algorithm that ranks those quantities by their sensitivity to a parameter, are due to Frankowski and colleagues [@frankowski2025features]. The restriction of association rules to exclusive patterns, which is what makes a rule attributable to a single parameter, is due to the same group [@frankowski2025ara]. The pseudocode, the quality-evaluation step and the four modifications to the classical frequent-itemset search are stated in the corrosion study [@frankowski2025corrosion]. What this article contributes is the transfer of that procedure to infrared spectra, the calibration of its detection threshold from instrument noise rather than from a chosen quantisation step, and the coupling of its boundary region to a referral decision that can be priced.",
+     "indent": false
+    },
+    {
+     "type": "para",
+     "text": "In the original formulation a rule is written as (1), with the two quality measures of the classical algorithm defined in (2) and (3) [@agrawal1993], [@frankowski2025ara].",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "A \\to B \\; [\\text{supp}, \\text{conf}]",
+     "number": 1
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where A is the antecedent of the rule and B its consequent; supp is the support of the rule and conf its confidence, both defined below. In this formulation A is restricted to a single element drawn from the set Y of parameters of the examined object, while B is drawn only from the set X of quantities that describe the measured signal. That restriction, together with the replacement of a support threshold by an explicit quality criterion, is what distinguishes this algorithm from a classical frequent-itemset search [@frankowski2025corrosion]."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{supp}(A) = \\frac{\\#\\{d_i \\in D : A \\subseteq d_i\\}}{\\#D}",
+     "number": 2
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where D is the database of records and d_i is one record in it; #D is the number of records in D; and A is an itemset. Support is therefore the fraction of records in which the itemset appears in full."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{conf}(A \\to B) = \\frac{\\text{supp}(A \\cup B)}{\\text{supp}(A)} \\approx P(B \\mid A)",
+     "number": 3
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where A and B are the antecedent and the consequent; supp(A union B) is the support of the two occurring together; and P(B | A) is the conditional probability of observing B given A, which confidence estimates from the database."
+    },
+    {
+     "type": "h2",
+     "text": "DATA"
+    },
+    {
+     "type": "para",
+     "text": "Table 1 summarises both collections. The primary dataset is FTIR-Plastics [@ftirplastics2024], a public collection of transmittance spectra of the six most widely produced industrial polymers: polyethylene terephthalate, high-density polyethylene, poly(vinyl chloride), low-density polyethylene, polypropylene and polystyrene. It contains 3000 specimens, 500 per polymer, each measured twice on the same instrument at two spectral resolutions, 8 and 4 cm⁻¹, with 32 scans, over 399.2 to 4001.6 cm⁻¹, giving 1869 and 3736 points respectively. The 8 cm⁻¹ subset is used throughout; the 4 cm⁻¹ subset is used only as a resolution sensitivity. Polymer identity is a property of the specimen known to the depositor and is not derived from any spectral matching procedure, which is the reason this collection and not the recyclate archive carries the methodological claims."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The transfer case is a public archive [@recyclate2025] of FTIR spectra of plastic particles recovered from organic fertiliser, compost-amended soil and wastewater-irrigated soil. It contains 356 spectra over 54 particles, of which 17 particles and 172 spectra carry a polymer label. An audit of this archive before any modelling established three facts that bound what it can support, and all three are reported here because they are easy to overlook. Its metadata table carries, alongside each spectrum, the record of the reference-library entry matched to it by an open spectral-matching tool [@cowger2021], so the fields naming polymer, morphology and colour describe the library match rather than an independently established property of the particle. Its quality verdict is produced by the archive's own automated thresholds, a library match score of 0.8 and a signal-to-noise ratio of 4, and not by visual inspection or an expert, giving 192 passes against 14 failures. And the unit of analysis is the particle, not the spectrum: one particle contributes up to 92 spectra."
+    },
+    {
+     "type": "h2",
+     "text": "ATTRIBUTES"
+    },
+    {
+     "type": "para",
+     "text": "Three windows are fixed a priori from the infrared band assignments established for these polymers [@jung2018] and confirmed to lie inside the measured range: W1 from 2800 to 3000 cm⁻¹, carbon-hydrogen stretching; W2 from 1650 to 1800 cm⁻¹, carbonyl; W3 from 1350 to 1500 cm⁻¹, methylene and methyl deformation. Within each window three attributes are computed. The amplitude A is the difference between the maximum and the minimum of the window. The offset O is the minimum, which carries the local baseline. The correlation C is the Pearson product-moment correlation between the window after min-max normalisation and a template, where the template is the median spectrum of the training split, normalised the same way. This yields nine attributes per spectrum. Amplitude is compared on a logarithmic scale and the other two on an absolute scale, so that a change is expressed in units in which the noise model is valid."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Fig. 1 makes the construction concrete. It shows the mean spectrum of each of the six polymers with the three windows shaded, and two things are visible at once. The windows cover a small fraction of the measured range, so the rule reads 259 of the 1869 channels, 104 in the stretching window and 78 and 77 in the other two, and ignores the remaining 1610 by design, not by learned weighting. And the polymers separate inside those windows in ways a spectroscopist can name: polyethylene terephthalate carries a deep carbonyl absorption that the polyolefins lack entirely, polystyrene and poly(vinyl chloride) differ from the polyolefins in the deformation window, and the two polyethylenes differ from polypropylene mainly in the shape, not the depth, of the carbon-hydrogen stretching band. The attributes defined below are the three ways of summarising a window that correspond to those three kinds of difference."
+    },
+    {
+     "type": "para",
+     "text": "Each window W of a spectrum s contributes three quantities, defined in (4) to (6).",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "A_W(s) = \\max_{\\nu \\in W} s(\\nu) - \\min_{\\nu \\in W} s(\\nu)",
+     "number": 4
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where s is one spectrum; W is one of the three fixed analysis windows; nu is wavenumber; and A_W is the amplitude of the window, that is the height from its lowest to its highest point. Amplitude responds to how much material is present and to path length."
+    },
+    {
+     "type": "eq",
+     "latex": "O_W(s) = \\min_{\\nu \\in W} s(\\nu)",
+     "number": 5
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where O_W is the offset of the window, the lowest value the window reaches. The offset carries the local baseline, which in transmittance spectra reflects scattering and sample presentation rather than chemistry."
+    },
+    {
+     "type": "eq",
+     "latex": "C_W(s) = \\frac{\\sum_{\\nu \\in W} (\\hat{s}(\\nu) - \\overline{\\hat{s}})(T_W(\\nu) - \\overline{T_W})}{\\sqrt{\\sum_{\\nu \\in W}(\\hat{s}(\\nu) - \\overline{\\hat{s}})^2 \\sum_{\\nu \\in W}(T_W(\\nu) - \\overline{T_W})^2}}",
+     "number": 6
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where T_W is a fixed template for window W, taken as the median shape of the training spectra in that window; the hat denotes the window after min-max normalisation, obtained by subtracting O_W and dividing by A_W; and the overbar denotes the arithmetic mean over the window. Because the normalisation removes both height and baseline, C_W measures shape alone. Three windows therefore yield nine named quantities, and every later step operates on those nine and never on the 1869 raw channels."
+    },
+    {
+     "type": "h2",
+     "text": "DETECTION THRESHOLD"
+    },
+    {
+     "type": "para",
+     "text": "A difference between two specimens counts only if it exceeds what the instrument could have produced by itself. Because the primary collection contains no replicate acquisition under fixed conditions, instrument noise is estimated per spectrum as the high-frequency residual left by a Savitzky-Golay filter [@savitzky1964] of window 11 and polynomial order 3. Across the 3000 specimens the median of this estimate is 0.1082 transmittance units and its 95th percentile is 0.1593. That noise is then propagated into each of the nine attributes by Monte Carlo perturbation of the spectrum, and the worst case over the six polymers is taken, giving a per-attribute standard deviation. The detection threshold is k times that standard deviation, with k set to 4 and varied over 3 and 5 as a sensitivity. The companion quantity, the ratio of between-specimen spread to the noise standard deviation itself, is the entry condition: if it is near unity the data cannot support the method at all. Fig. 2 shows the margin per polymer. Here it ranges from 25.5 for low-density polyethylene to 56.9 for polyethylene terephthalate. Measured against the threshold rather than against the noise, that is after division by k, the same ratios run from 6.4 to 14.2, so the condition is satisfied with a wide margin on either reading."
+    },
+    {
+     "type": "para",
+     "text": "The threshold is obtained in three steps, (7) to (9). Instrument noise is estimated per spectrum, propagated into each attribute by Monte Carlo simulation, and converted into a minimum difference that a change must exceed before it is recorded at all.",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "\\sigma_i = \\text{SD}\\left(s_i - \\text{SG}_{11,3}(s_i)\\right)",
+     "number": 7
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where s_i is the i-th spectrum and SG is a Savitzky-Golay filter of window length 11 and polynomial order 3 [@savitzky1964]. The filter follows the absorption bands but not the point-to-point fluctuation, so the standard deviation of the residual it leaves is an estimate of instrument noise for that spectrum. This substitutes for replicate scans, which the dataset does not provide."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{sens.min}_j = k \\cdot \\max_{c \\in C} \\; \\text{med}_{i \\in c} \\; \\text{SD}\\left(f_j(s_i + \\varepsilon) - f_j(s_i)\\right), \\quad \\varepsilon \\sim N(0, \\sigma_i^2)",
+     "number": 8
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where f_j is the j-th of the nine attributes; epsilon is a noise draw from a normal distribution with the per-spectrum standard deviation of (7); C is the set of measurement conditions; med is the median over the spectra acquired under one condition; and k is the multiplier that sets how many noise standard deviations a change must exceed. The maximum over conditions makes the threshold a worst case rather than an average. The frozen protocol fixes k at 4 and varies it at 3 and 5 as a sensitivity analysis."
+    },
+    {
+     "type": "eq",
+     "latex": "\\ell_j(\\Delta) = \\uparrow \\text{ if } \\Delta > \\text{sens.min}_j, \\; \\downarrow \\text{ if } \\Delta < -\\text{sens.min}_j, \\; - \\text{ otherwise}",
+     "number": 9
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where Delta is the difference in attribute j between two specimens and the arrows are the ternary labels increase, decrease and no change used by the source algorithm [@frankowski2025corrosion]. Replacing a chosen quantisation step by a noise-derived threshold is the one change this article makes to the sensitivity mechanism of that method."
+    },
+    {
+     "type": "h2",
+     "text": "RULES OVER PAIRS"
+    },
+    {
+     "type": "para",
+     "text": "Rules are mined over pairs of specimens rather than over single records, because the question asked is how an attribute responds when one factor changes and everything else is held fixed. A pair enters the database only if the two specimens differ in the factor under test, come from different specimens, and agree on every other factor. Each attribute difference is then labelled on three levels, increase, no change, or decrease, against that attribute's threshold. Weighted support and confidence follow, with Wilson score intervals [@wilson1927] for the confidence and a permutation test with Benjamini-Hochberg control of the false discovery rate [@benjamini1995]. For the primary task the number of admissible pairs is of the order of 3.75 million, so each ordered pair of polymer values is capped at 2000 draws with a fixed seed; the cap is a sampling of the database and not a change to its definition, and its effect is reported."
+    },
+    {
+     "type": "para",
+     "text": "A pair enters the database only under condition (10), and the confidence of a rule over that database is computed as (11) with the interval (12).",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "\\Pi_y = \\{(i,j) : y_i \\neq y_j, \\; g_i \\neq g_j, \\; z_i = z_j \\}",
+     "number": 10
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where Pi_y is the set of admissible pairs for parameter y; y_i and y_j are the parameter values of the two specimens, which must differ; g_i and g_j are their group labels, which must also differ so that a pair never comes from one group; and z_i and z_j collect every other parameter, which must agree. The three conditions together make the pair differ in one parameter only, which is what allows the observed change to be attributed to that parameter."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{conf}(y \\to \\ell_j) = \\frac{\\sum_{(i,j') \\in \\Pi_y} w_{ij'} \\, I[\\ell_j \\neq -]}{\\sum_{(i,j') \\in \\Pi_y} w_{ij'}}",
+     "number": 11
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where w is the product of the two specimen weights, which balances classes of unequal size; the indicator is one when the attribute moved beyond its threshold in either direction and zero when it did not; and the sum runs over the admissible pairs of (10). Confidence is therefore the weighted fraction of admissible pairs in which the attribute responded."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{CI} = \\frac{\\hat{p} + \\frac{z^2}{2n} \\pm z \\sqrt{\\frac{\\hat{p}(1-\\hat{p})}{n} + \\frac{z^2}{4n^2}}}{1 + \\frac{z^2}{n}}",
+     "number": 12
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where p-hat is the observed confidence, n is the number of admissible pairs and z is the standard normal quantile, 1.96 for a 95% interval [@wilson1927]. The Wilson form is used rather than the normal approximation because confidences close to one are common here and the normal interval would exceed one. Significance is assessed by permuting the parameter labels within strata and controlling the false discovery rate across all attribute and parameter combinations [@benjamini1995]."
+    },
+    {
+     "type": "h2",
+     "text": "ROUGH SETS AND THE THREE-WAY DECISION"
+    },
+    {
+     "type": "para",
+     "text": "Each selected attribute is discretised into bins whose width is its own detection threshold, so that two specimens in the same cell differ by less than that threshold on every selected attribute. The converse does not hold: the bin edges sit on a fixed grid, so two specimens closer than the threshold but on opposite sides of an edge are placed in different cells. Indiscernibility here is therefore the equality of bin indices, not a statement that the instrument could not tell the two apart, and the dependence of the results on where the grid starts is treated as one of the open choices in Section IV-G. The construction follows Pawlak [@pawlak1982]. For a class X and an attribute set B, the lower approximation collects the cells that contain only members of X, and the upper approximation collects the cells that contain at least one. The boundary region is their difference. Two summary quantities follow: the accuracy of approximation, the ratio of the sizes of the lower and upper approximations for one class, and the quality of approximation, the fraction of all specimens that fall in some lower approximation. At test time a specimen falling in a cell of a lower approximation receives that class; any other specimen is referred. Referral is a decision outcome, not an error. Two names are used for the same quantity throughout and are fixed here: coverage is the share of specimens on which the rule issues a verdict, and the referral rate is one minus coverage. Both are given as percentages in running text and as proportions in the tables. Two modes of the same rule are also reported throughout: the forced-choice mode, in which the referral outcome is disabled and the rule must name a polymer for every specimen, and the accepted-specimen figure, computed only on the specimens it does not refer."
+    },
+    {
+     "type": "para",
+     "text": "The partition induced by the selected attributes supports the classical rough-set quantities (13) to (17), and the decision rule (18) [@pawlak1982], [@yao2010prob].",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "\\underline{B}(X) = \\bigcup \\{ E \\in U/B : E \\subseteq X \\}",
+     "number": 13
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where U is the set of specimens, B the selected attribute set, U/B the partition of U into cells and E one such cell; two specimens fall in the same cell when every selected attribute falls in the same threshold-wide bin, which implies agreement to within that threshold but is not implied by it, because the bin edges are fixed. X is the set of specimens of one polymer. The lower approximation collects the cells that contain members of X only, and is therefore the part of X that the attributes resolve unambiguously. The word certainty is used throughout in this technical sense: a cell is certain when every training specimen in it carries the same label. It is a property of the partition, not a guarantee that a new specimen falling in that cell is correctly classified, and the held-out accuracy reported in Section IV is what measures the latter."
+    },
+    {
+     "type": "eq",
+     "latex": "\\overline{B}(X) = \\bigcup \\{ E \\in U/B : E \\cap X \\neq \\emptyset \\}",
+     "number": 14
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where the upper approximation collects every cell that contains at least one member of X, and is therefore the part of the sample that could belong to X on this evidence."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{BN}_B(X) = \\overline{B}(X) \\setminus \\underline{B}(X)",
+     "number": 15
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where the boundary region is the difference between the two approximations. It holds precisely the specimens that the attributes cannot separate, and its size is what a referral outcome makes visible instead of absorbing it into an error rate."
+    },
+    {
+     "type": "eq",
+     "latex": "\\alpha_B(X) = \\frac{|\\underline{B}(X)|}{|\\overline{B}(X)|}",
+     "number": 16
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where alpha is the accuracy of approximation for one polymer. It equals one when that polymer has no boundary region at all, which is the strongest statement the evidence can support for a class."
+    },
+    {
+     "type": "eq",
+     "latex": "\\gamma_B(\\Pi) = \\frac{\\sum_{X \\in \\Pi} |\\underline{B}(X)|}{|U|}",
+     "number": 17
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where Pi is the partition of the sample into polymers and gamma is the quality of approximation over the whole partition, that is the fraction of specimens placed in unambiguous cells. The referral rate reported in Section IV is one minus gamma measured on held-out specimens, which is why it is a structural property of the partition and not a threshold chosen after the results were seen."
+    },
+    {
+     "type": "eq",
+     "latex": "\\delta(s) = X \\text{ if } E(s) \\subseteq \\underline{B}(X), \\text{ else } \\delta(s) = \\text{refer}",
+     "number": 18
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where s is a test specimen, E(s) is the cell it falls into and delta is the decision. The specimen receives a polymer label when its cell lies inside a lower approximation, and is referred otherwise. This is the three-way decision in the sense of Yao [@yao2010prob], with the difference that the referral region here is derived from the partition rather than from a threshold on a calibrated score."
+    },
+    {
+     "type": "h2",
+     "text": "EVALUATION"
+    },
+    {
+     "type": "para",
+     "text": "Evaluation follows a protocol that was written, version-tagged and frozen before any modelling result was produced, and is released with the code. The primary task is six-class polymer identity under stratified five-fold cross-validation. The frozen protocol specifies twenty repetitions of that scheme; one repetition was completed within the available computational budget, and every figure reported below is therefore based on five folds of a single repetition. Section VI states that deviation and its consequences. Template, threshold, attribute selection and bin edges are estimated inside each training fold only. The comparison classifiers are a support vector machine with a radial basis function kernel [@cortes1995], a random forest [@breiman2001], partial least squares discriminant analysis [@barker2003] and a one-dimensional convolutional network of the kind established for vibrational spectra [@acquarelli2017], each tuned inside the training fold and evaluated on identical folds. The first three are the scikit-learn implementations [@pedregosa2011]; the convolutional network is implemented in PyTorch [@paszke2019]. Primary metrics are balanced accuracy [@brodersen2010] and the Matthews correlation coefficient [@matthews1975]. The latter is a single coefficient over the whole confusion matrix that falls to zero for a classifier no better than chance, and is preferred to accuracy on multiclass problems of this kind [@chicco2020]. Both carry a bootstrap over specimens of 1000 iterations. The glass box is compared against the strongest baseline by a paired t-test across the five folds. The corrected resampled test of Nadeau and Bengio [@nadeau2003] specified by the protocol is normally described for repeated resampling. Its content, however, is a variance correction for overlapping training sets, and that correction applies to a single stratified five-fold run as well. The factor one over k becomes one over k plus the ratio of test to training set size, which here inflates the variance by 2.25 and divides the statistic by 1.5. Both forms are computed; the corrected one is quoted. The archive does not document whether the 500 specimens per polymer are distinct physical items, so one check was run before the protocol was frozen. For every polymer, the mean correlation between spectra adjacent in file order equals the mean correlation between randomly drawn pairs of the same polymer. That is evidence against acquisition-block structure, but not proof of specimen independence. Section VI treats this as a limitation."
+    },
+    {
+     "type": "para",
+     "text": "The reported metrics are (19) and (20), and the separation of two polymers along one attribute is quantified by the overlapping coefficient (21).",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{BA} = \\frac{1}{K} \\sum_{k=1}^{K} \\frac{TP_k}{TP_k + FN_k}",
+     "number": 19
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where K is the number of polymers and TP_k and FN_k are true positives and false negatives for polymer k. Balanced accuracy is the mean per-class recall, which is reported instead of plain accuracy because it is insensitive to class imbalance [@brodersen2010]."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{MCC} = \\frac{c \\cdot n - \\sum_k p_k t_k}{\\sqrt{\\left(n^2 - \\sum_k p_k^2\\right)\\left(n^2 - \\sum_k t_k^2\\right)}}",
+     "number": 20
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where c is the number of correctly classified specimens, n is the total, p_k is the number predicted as polymer k and t_k the number truly of polymer k. The Matthews correlation coefficient is reported alongside balanced accuracy because it remains informative when a classifier is strong on some classes and weak on others [@matthews1975], [@chicco2020]."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{OVL}(f_j; X_1, X_2) = \\int \\min\\{\\hat{p}_1(u), \\hat{p}_2(u)\\} \\, du",
+     "number": 21
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where p-hat_1 and p-hat_2 are Gaussian kernel density estimates of attribute f_j within polymers X_1 and X_2, with Silverman bandwidth on a 512-point grid. The overlapping coefficient is zero for perfectly separated distributions and one for identical ones, so it measures how far a single named attribute separates two materials before any rule is built on it."
+    },
+    {
+     "type": "h2",
+     "text": "FROM A REFERRAL RATE TO A SAMPLING PLAN"
+    },
+    {
+     "type": "para",
+     "text": "A per-specimen decision becomes a commercial decision through an acceptance sampling plan, whose operating characteristic is (22). An imperfect inspector does not change the plan; it changes the defective fraction the plan actually sees, as in (23) [@schilling2017].",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "P_a(p) = \\sum_{d=0}^{c} \\binom{n}{d} p^{d} (1-p)^{n-d}",
+     "number": 22
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where p is the true fraction of non-conforming specimens in a lot, n is the sample size, c is the largest number of defectives for which the lot is still accepted and P_a is the probability of accepting a lot of quality p. Producer risk is one minus P_a at an acceptable quality level and consumer risk is P_a at a rejectable one [@schilling2017]."
+    },
+    {
+     "type": "eq",
+     "latex": "p_{\\text{eff}} = p \\cdot \\text{Se} + (1 - p)(1 - \\text{Sp})",
+     "number": 23
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where Se is the sensitivity of the inspection, that is the probability that a non-conforming specimen is detected; Sp is its specificity; and p_eff is the defective fraction the sampling plan responds to once inspection error is included. The operating characteristic can therefore be reused without modification: only its argument changes."
+    }
+   ]
+  },
+  {
+   "heading": "RESULTS",
+   "blocks": [
+    {
+     "type": "h2",
+     "text": "ACCURACY PARITY AND THE PRICE OF AUDITABILITY"
+    },
+    {
+     "type": "para",
+     "text": "Table 2 and Fig. 3 report the primary comparison. Forced to decide every specimen, the glass box reaches a balanced accuracy of 0.9480 with a 95% interval across folds of 0.9388 to 0.9572 and a Matthews correlation coefficient of 0.9377. The strongest baseline, the support vector machine, reaches 0.9997, with partial least squares discriminant analysis at 0.9993, the random forest at 0.9983 and the convolutional network at 0.9980. The difference of 0.0517 against the strongest baseline is significant. Under the corrected resampled test of Nadeau and Bengio [@nadeau2003], which the protocol specifies, t is 11.21 and p is 0.00036, with a 95% interval on the difference of 0.0389 to 0.0645. The uncorrected paired t-test across the same five folds gives t equal to 16.81 and p equal to 0.00007; the corrected form is the one quoted throughout, because it accounts for the overlap between training folds. Section VI states the remaining consequence of the single repetition, which is that this interval is narrower than repeated cross-validation would give. On a six-class problem the majority-class reference is 0.1667, so every method is far above chance and the comparison is between near-ceiling alternatives."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Permitted to refer, the same rule reaches 0.9973 balanced accuracy and 0.9968 Matthews correlation on the 75.3% of specimens it accepts. The word parity in the title is used in a specific and testable sense, so it is worth stating what was and was not shown. The mean shortfall of the accepted-specimen figure against the strongest baseline evaluated on all specimens is 0.0024 balanced accuracy, and a one-sided test with the same variance correction rejects a shortfall of one percentage point or more with p equal to 0.00435. The same holds against each of the other three baselines. Parity therefore means non-inferiority at a one-point margin, established by a test, and not statistical equivalence, which was not tested. The two modes are also measured on different specimen sets, since the accepted-specimen figure is evaluated only on what the rule accepts, so this comparison favours the rule by construction and should be read together with the referral rate rather than instead of it. The shortfall of the forced-choice mode is not removed by referral; it is relocated into a quantity the operator can see, price and act on, namely one specimen in four sent for a second test. A black-box classifier offers no equivalent quantity: its errors are distributed across all specimens and are invisible at the point of decision."
+    },
+    {
+     "type": "h2",
+     "text": "WHAT THE DECISION RESTS ON"
+    },
+    {
+     "type": "para",
+     "text": "The decision rests on two named attributes, and which two they are depends on the criterion used to pick them. Two criteria are in play in this article and they return different pairs, so they are separated here before any number is quoted, and are referred to below as the approximation criterion and the cross-validated criterion. The first, the approximation criterion, maximises the quality of approximation on the full sample: it selects the baseline offsets of the carbon-hydrogen stretching and carbonyl windows, O_W1 and O_W2, partitioning the specimens into 1183 cells and placing 90.4% of them inside a lower approximation. That share is the quality of approximation, written as the proportion 0.9037 wherever it is used as an index. That pair is what the rough-set quantities in this subsection describe. The second, the cross-validated criterion, is the one the classifier evaluated in Table 2 actually uses, inner cross-validated balanced accuracy on the training fold. It chooses the amplitude of the carbonyl window together with the shape correlation of the deformation window, and that is the pair reported in every fold of the cross-validation and in 19 of the 20 refits of Section IV-C. Maximising the quality of approximation maximises how much of the training sample falls in unambiguous cells, while the classifier's criterion maximises held-out accuracy, and on this dataset the two do not coincide. Per class the accuracy of approximation is 1.000 for polyethylene terephthalate, which has an empty boundary region, 0.9492 for polystyrene, 0.9017 for poly(vinyl chloride), 0.8462 for polypropylene, 0.6789 for low-density polyethylene and 0.6295 for high-density polyethylene, with boundary regions of 0, 26, 51, 84, 184 and 239 specimens respectively. The pattern is chemically sensible rather than arbitrary: the two polyethylenes differ in branching rather than in functional groups, so they are the pair the chosen attributes separate least well, and they account for most of the referrals."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Of the 144 mined rules, 98 remain significant after false-discovery-rate control. The median confidence that an attribute moves beyond its threshold when the polymer changes is 0.966, and 13 rules reach a confidence of exactly 1.000 while a further two round to it. Table 4 and Fig. 4 give the full rule matrix. Attributes rank by mean confidence across polymer pairs. The offset of the carbon-hydrogen window is the most responsive at 0.9880, with a minimum of 0.9270 over all pairs, followed by the offset of the deformation window at 0.9707 and the amplitude of the carbon-hydrogen window at 0.9600; the least responsive is the correlation of the carbonyl window at 0.8471. Fig. 5 reports the same question distributionally. Distributional separation tells a complementary story: the median overlap coefficient across the 135 combinations of nine attributes and fifteen polymer pairs is 0.3550, and 23 of them fall below 0.05, that is, are almost perfectly separated. The single most separating attribute by median overlap is the shape correlation of the deformation window at 0.0493. The released matrix also contains six one-against-the-rest comparisons, 54 further rows; they are excluded from every summary quoted here, because they are not polymer pairs."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The rule confidences reported in the previous paragraph are stable under the choices the protocol left open; Table 5 and Fig. 9 give the full sweep. Changing the pair cap from 500 to 2000 to 5000 moves the headline confidence of the amplitude attribute from 0.9600 to 0.9596 to 0.9605. Changing k from 3 to 4 to 5 moves it from 0.9698 to 0.9596 to 0.9508, that is, monotonically and by less than two percentage points over a factor of 1.67 in threshold width. Re-running the analysis at 4 cm⁻¹ instead of 8 cm⁻¹ gives 0.9758 against 0.9596, so finer resolution slightly increases the measured responsiveness without changing any conclusion."
+    },
+    {
+     "type": "h2",
+     "text": "STABILITY OF WHAT THE MODEL POINTS AT"
+    },
+    {
+     "type": "para",
+     "text": "The practical claim behind interpretability by design is that the quantities a model uses do not move when the model is refitted. This was tested directly. Table 7 and Fig. 7 record what happens over repeated fits. Over twenty fits on independently drawn 70% training samples the classifier was refitted end to end, including its attribute selection, exactly as in the cross-validation. The selected pair was the amplitude of the carbonyl window with the shape correlation of the deformation window in 19 of the 20 fits, and a different pair once, so two distinct sets occurred. The pair selected most often is the same one chosen inside every fold of the cross-validation, which is the consistency the claim requires. A second, weaker selection criterion was recorded alongside: maximising the quality of approximation on the training sample alone returns the two baseline offsets in all twenty fits. Each criterion is therefore stable in itself, but they do not agree with each other, and that disagreement is the honest measure of how much the representation depends on the rule used to choose it. Over the same twenty fits, the ranking of the same nine attributes produced by exact tree-based Shapley attribution [@lundberg2020tree] of a random forest had a mean Kendall rank correlation [@kendall1938] between repeats of 0.8816 with a minimum of 0.6667, so the ranking as a whole is stable. The instability is concentrated where it matters for a written specification: the set of three highest-ranked attributes took two distinct values and its modal value occurred in 90% of repeats. Both representations live in the same nine-attribute space, so this is not an artefact of contrasting nine named quantities with 1869 raw channels. It is, however, a comparison between a set of two and a set of three, and set size affects every measure of set stability, so the comparison was repeated at matched size. At size two the attribution is the more stable of the two: its top pair is the same in all twenty fits, mean pairwise Jaccard 1.0000, against 19 of 20 and 0.9333 for the rule's own selection. The claim that a glass box points at more stable quantities than a post-hoc method is therefore not supported on this dataset, and is withdrawn. What survives is a different and narrower statement: the two quantities the rule selects are the decision, so their stability is the stability of the artefact a specification would cite, whereas the attribution's top pair ranks the inputs of a model whose verdict still depends on all nine. Stability of a ranking and stability of a rule are not the same property, and only the second can be written into a contract. Table 7 reports both set sizes."
+    },
+    {
+     "type": "h2",
+     "text": "DATA EFFICIENCY: THE HYPOTHESIS IS NOT SUPPORTED"
+    },
+    {
+     "type": "para",
+     "text": "A frequent argument for models built on a small number of physically meaningful quantities is that they should need less training data than models that must learn a representation. That argument was tested and it fails on this dataset. Table 6 and Fig. 6 answer the protocol's fourth question. Across training subsets from 1 to 100% of the specimens, with three repetitions of five-fold cross-validation at each size, the glass box is behind the strongest baseline at every size. The support vector machine, random forest and partial least squares model were run at all eight sizes; the convolutional network only at 75% and 100%, which is a departure from the protocol recorded in Section VI. It does not affect the comparison, because the support vector machine is the strongest baseline at every size where both were run. The shortfall in balanced accuracy is 0.148 at 1% of the specimens, which is 4 per class, then 0.159 at 2%, 0.139 at 5%, 0.104 at 10%, 0.084 at 25%, 0.067 at 50%, 0.058 at 75% and 0.053 at 100%, which is 400 per class. The 95% interval of the difference excludes zero in favour of the baseline at every size, so there is no crossover. The trend is also the opposite of the hypothesis over most of the range. The gap widens slightly between 1 and 2%, where both the rule and the baselines are still far from their ceiling, then narrows steadily from 2 to 100%. The steps shrink as it narrows: the last two increments, from 50 to 75% and from 75 to 100%, close the gap by 0.010 and 0.005. Extrapolating that decelerating trend would have the two meeting far beyond any sample size this task will encounter, so on this evidence the constraint on the rule is not sample size but the expressive capacity of a two-attribute partition. Reporting this matters, because the data-efficiency claim is often asserted for interpretable models without being measured."
+    },
+    {
+     "type": "h2",
+     "text": "FROM REFERRAL RATE TO ACCEPTANCE RISK"
+    },
+    {
+     "type": "para",
+     "text": "A per-specimen decision becomes a commercial decision through a sampling plan, and an imperfect test changes the plan's risk profile. What follows is a scenario analysis and not a measurement of any real inspection regime: it maps the classifier's measured error onto four standard single-stage plans under the assumptions stated in (22) and (23), namely a binary conforming or non-conforming event, independent draws within a lot, and inspection error that does not depend on which polymer was declared. Fig. 10 shows the resulting curves and Table 8 the risks at two defective fractions. The inspector here is the glass box in forced-choice mode, so its own measured quantities are used: a mean per-class sensitivity of 0.9480 and a mean per-class specificity of 0.9896. Table 8 contrasts a perfect inspector with that one. Two limits of this calculation should be stated before its numbers are read. The plan treats inspection as binary, conforming or not, whereas the classifier is six-class, so the per-class figures are being used as a proxy for a binary verdict. And the referral outcome has no place in a single-stage plan: a referred specimen is neither accepted nor rejected, so the calculation below describes an inspector operating in forced-choice mode, which is the conservative case. For a plan with a sample of 50 and zero acceptable defectives, the producer risk at a one percent defective fraction rises from 0.3950 to 0.6316; for a sample of 80 accepting one defective it rises from 0.1908 to 0.4712, and for 125 accepting two from 0.1307 to 0.4502. Consumer risk at a ten percent defective fraction stays negligible throughout, falling from 0.0052 to 0.0041 for the first plan. The asymmetry is the practically important finding: an imperfect classifier used inside a conventional sampling plan hurts the supplier of good material far more than it protects the buyer, because false rejections accumulate on lots that are in fact conforming. A referral outcome, which routes the ambiguous specimen to a second test instead of rejecting it, is the direct remedy, and its cost is the referral rate measured above."
+    },
+    {
+     "type": "h2",
+     "text": "THE PRICE OF A FINER GRID"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "The referral rate is not a single number imposed by the method; it is the consequence of which attribute set is used, and the two panels of Fig. 8 show the trade-off directly. The ten strongest two-attribute sets span a quality of approximation from 0.9037 down to 0.7283, which is to say that the weakest of them refers almost three specimens in ten where the strongest refers fewer than one. The ordering is informative in itself: every one of the ten best sets contains at least one baseline offset, and the two best contain the offset of the carbon-hydrogen stretching window. The second panel plots the referral rate against the number of cells the set induces and shows why a finer grid does not improve certainty without cost. A grid with more cells makes each cell purer, but it also places more specimens in cells that the training sample never populated, and those specimens are referred. The method therefore has a tunable parameter whose cost is quantified, and the frozen protocol fixed its position before any of these numbers were seen."
+    },
+    {
+     "type": "h2",
+     "text": "SENSITIVITY TO THE CHOICES THE PROTOCOL LEFT OPEN"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "Three decisions in the protocol were deliberately left variable because no principled value exists for them: the cap on the pair database, the multiplier that converts noise into a detection threshold, and which of the two spectral resolutions is used. Fig. 9 shows the headline rule confidence under all of them. Across every setting the largest spread observed for any attribute is 0.1508, and for the attributes that carry the decision the curves are visually flat. This matters for a reviewer because a result that moved substantially with the pair cap would indicate that the rule responds to the sampling procedure, not to the material, and a result that moved with k would indicate that the threshold was doing the classification. Neither is the case. The sensitivity analysis is reported here, not in supplementary material because it is the evidence that the single configuration named in the protocol is not an artefact of a favourable configuration."
+    }
+   ]
+  }
+ ]
+}

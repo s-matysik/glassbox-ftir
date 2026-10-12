@@ -1,0 +1,145 @@
+{
+ "title": "A Glass-Box Classifier for FTIR Identification of Plastics: Accuracy Parity on Accepted Specimens With an Explicit Referral Rate",
+ "authors_line": "PUTI SINANSARI1, PAWEL KAROL FRANKOWSKI2, MARCIN MAKA2, RYSZARD DANIEL ZIETEK3, RADOSLAW GORDON3, TOMASZ STAWICKI4, AND SEBASTIAN MATYSIK5",
+ "affiliations": [
+  "1Business Management Department, Institut Teknologi Sepuluh Nopember (ITS), Surabaya, Indonesia",
+  "2Faculty of Computer Science and Telecommunications, Maritime University of Szczecin, Waly Chrobrego 1-2, 70-500 Szczecin, Poland",
+  "3Faculty of Mechatronics and Electrical Engineering, Maritime University of Szczecin, Willowa 2, 71-650 Szczecin, Poland",
+  "4Faculty of Environmental Management and Agriculture, West Pomeranian University of Technology in Szczecin, Papieza Pawla VI Street 1, 71-459 Szczecin, Poland",
+  "5Institute of Management, Doctoral School, University of Szczecin, al. Papieza Jana Pawla II 22a, 70-453 Szczecin, Poland"
+ ],
+ "corresponding": "Corresponding author: Sebastian Matysik (sebastian.matysik@usz.edu.pl). E-mail addresses: P. Sinansari (puti@its.ac.id), P. K. Frankowski (frankowski.p.k@gmail.com), M. Maka (m.maka@pm.szczecin.pl), R. D. Zietek (r.zietek@pm.szczecin.pl), R. Gordon (r.gordon@pm.szczecin.pl), T. Stawicki (tomasz.stawicki@zut.edu.pl).",
+ "funding": "",
+ "abstract": "A circular economy for plastics turns on one decision: whether recovered polymer is what it is declared to be. Infrared identification delegates it to unauditable models, so conforming material is downcycled and rejections cannot be contested. This study asks whether named spectral quantities can replace them at laboratory-grade accuracy, and at what cost in refusals. Nine attributes, amplitude, shape correlation and offset over three absorption windows, are extracted with noise-calibrated thresholds; a rough-set rule over at most two decides, abstaining when evidence is weak. On 3000 public specimens of six polymers it reaches 0.9973 balanced accuracy on the 75.3% accepted, against 0.9997 for the strongest baseline on all specimens, non-inferior at a one-point margin; forced to decide, 0.9480. Given the same referral budget the baselines are perfect on what they keep: the gain is a refusal expressed in named physical quantities, at a cost of 0.0027 in accuracy. Across twenty refits it selects the same pair 19 times, though post-hoc attribution is no less stable at matched size. In an acceptance sampling plan it raises producer risk from 0.3950 to 0.6316 at 1% defectives. Two inferences for a circular economy follow. Referral is not uniform across materials, 4.8% for poly(ethylene terephthalate) against 66.2% for low-density polyethylene, locating the verification cost of recyclate in polyolefins. And because misclassification raises producer risk far more than consumer risk, the supplier of conforming recyclate absorbs measurement uncertainty, an incentive to downcycle that explicit referral prices instead of hiding. Data, code and protocol are released.",
+ "index_terms": "Acceptance sampling, circular economy, explainable artificial intelligence, Fourier transform infrared spectroscopy, interpretable machine learning, polymer identification, recycling, rough set theory",
+ "sections": [
+  {
+   "heading": "INTRODUCTION",
+   "blocks": [
+    {
+     "type": "para",
+     "text": "Secondary plastics are traded on claims about their composition. A buyer who cannot verify those claims at the point of sale prices the material for the average of what the market supplies, which drives better material out of the market and thins it, the mechanism described for used goods by Akerlof [@akerlof1970] and applied to recycling markets by Nicolli, Johnstone and Soderholm [@nicolli2012failures]. Empirical work on European streams confirms that the binding constraint on closed-loop recycling is quality rather than collected volume [@eriksen2018quality], [@gall2020pickers], and that a technically adequate recyclate is still frequently refused by buyers [@huysveld2022substitut]. Verification is therefore not only a measurement problem; it is the instrument through which a quality claim becomes credible."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Fourier transform infrared spectroscopy, FTIR, is the routine way to establish what a polymer is, and its band assignments for the common commodity polymers are well established [@jung2018]. The decision itself is increasingly delegated to supervised classifiers, and their reported accuracies are high. The difficulty is what such a result can be used for. A buyer who rejects a consignment, a laboratory that signs a certificate, or an auditor who checks a recycled-content declaration under EN 15343 needs to state why a specific specimen was classified as it was, and needs to know when the evidence was too weak to decide. An aggregate accuracy figure answers neither question."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The usual remedy is to explain the model after it has been trained. That remedy is itself contested. Rudin argues that for consequential decisions one should build an interpretable model rather than explain an opaque one [@rudin2019]; Lipton shows that interpretability is not a single property and that claims about it must name which property is meant [@lipton2018]. Post-hoc attribution has specific documented failure modes: it can be deliberately manipulated by an adversarially constructed model [@slack2020], it depends on a reference distribution that is rarely justified [@kumar2020], it changes under input perturbations that leave the prediction unchanged [@alvarezmelis2018], [@ghorbani2019], and several saliency methods fail basic sanity checks [@adebayo2018]. An explanation that changes between two fits of the same model on the same data cannot support a contractual decision."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "This article takes the alternative route. The model is built from quantities that a spectroscopist can name before any data are seen: the amplitude, the shape correlation and the baseline offset of three absorption windows chosen from polymer chemistry. The detection threshold of each quantity is calibrated from instrument noise, so the model knows how large a difference has to be before it counts as a difference at all. A classifier of this kind is called a glass box here, in contrast to a black box: not a model that has been explained after training, but one whose decision boundary is written in those named quantities from the outset, so that reading the rule and reading the explanation are the same act. The decision is taken by a rough-set rule [@pawlak1982] over at most two of these quantities, and the rule is allowed a third outcome, refer, when the specimen falls in a region where the training data do not determine the class."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The contribution is not that such a model is more accurate. It is not. The contribution is threefold. The shortfall becomes an explicit, measurable quantity, the referral rate, instead of an unquantified risk distributed invisibly across every decision. The attribute set the model uses is stable across repeated fits, which post-hoc attribution on the same data is not. And the referral rate converts directly into the vocabulary of acceptance sampling, where it can be priced as producer and consumer risk."
+    },
+    {
+     "type": "h2",
+     "text": "RESEARCH OBJECTIVE AND QUESTIONS"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "The objective of this study is to determine whether polymer identification from infrared spectra can be performed by a classifier that is interpretable by construction, at an accuracy that a laboratory would accept. The second half of the objective is to quantify what that choice costs, in the quantity that determines commercial cost: the proportion of specimens on which the classifier declines to decide. The objective is deliberately not to maximise accuracy. It is to establish whether an auditable decision can be obtained at a stated and measurable price, and to express that price in the terms a supply contract already uses."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Three questions follow from that objective, and each is answered in Section IV from the computations reported there. RQ1: does a rule over a small number of named spectral quantities reach the accuracy of conventional classifiers on the specimens it accepts, and what referral rate does that parity require? RQ2: are the quantities such a rule selects more stable across refits than the quantities a post-hoc attribution method identifies as important, the property on which a written specification would have to rely? RQ3: how does the referral rate translate into producer and consumer risk once the classifier is placed inside a conventional acceptance sampling plan, and who bears the cost of an imperfect inspection? A fourth question, whether a rule of this kind is more data-efficient than a black-box model, was posed in the frozen protocol and is answered in the negative, which is reported as a result rather than omitted."
+    },
+    {
+     "type": "h2",
+     "text": "CONTRIBUTIONS"
+    },
+    {
+     "type": "para",
+     "text": "The specific contributions are as follows. First, a classifier for FTIR polymer identification is constructed entirely from named spectral quantities with a noise-calibrated detection threshold, and is evaluated against four conventional classifiers on identical splits of 3000 specimens. Second, the three-way decision rule of Yao [@yao2010prob], [@yao2012outline] is instantiated on rough-set approximations of those quantities, and the resulting referral rate is reported as a primary result rather than suppressed. Third, the stability of the selected attribute set is measured across repeated fits and contrasted with the stability of a post-hoc attribution ranking computed on the same representation. Fourth, the referral rate is mapped onto single-stage acceptance sampling, giving the producer and consumer risk that an imperfect inspector implies. Fifth, the full protocol was frozen and version-tagged before any modelling result was produced, and is released together with the code, the derived tables and the data."
+    },
+    {
+     "type": "h2",
+     "text": "WHAT THIS ARTICLE DOES NOT CLAIM"
+    },
+    {
+     "type": "para",
+     "text": "Three limits are stated at the outset because they bound every result that follows. The method is not claimed to establish fitness for purpose of any material; it identifies a polymer and reports when it cannot. The rules reported here are association rules in the sense of Agrawal, Imielinski and Swami [@agrawal1993], not action rules in the sense of Ras and Tsay [@ras2003dear], because the observational data used here contains no intervention. Batch-level acceptance is treated as a design calculation on top of per-specimen decisions, not as an empirical result."
+    }
+   ]
+  },
+  {
+   "heading": "RELATED WORK",
+   "blocks": [
+    {
+     "type": "h2",
+     "text": "MACHINE LEARNING FOR FTIR POLYMER IDENTIFICATION"
+    },
+    {
+     "type": "para",
+     "text": "The retrieved literature divides cleanly by model family: chemometric discriminant methods [@dasilva2020fpa], tree ensembles [@hufnagl2021mufti], [@liu2023blended], [@rosalesmartinez2025], kernel and instance methods [@villegascamacho2025norm], [@yan2022ensemble], [@williams2025], and deep models including one-dimensional convolutional networks [@jiang2021cnnatr], [@smolen2025pnas], dense networks [@herb2025humans] and generative augmentation [@liu2026sparse]. No retrieved study applies a transformer to FTIR polymer identification, and that absence is stated rather than filled with a study from another modality."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The weakness that can be assessed from the published text is not the model family but the evaluation design. Of fifteen studies examined, only three describe the data split in the retrievable text, and all three split at the level of the spectrum rather than the specimen or the batch: Monte Carlo cross-validation [@hufnagl2021mufti], ten-fold cross-validation [@villegascamacho2025norm], and stratified repeated cross-validation with a hold-out set [@rosalesmartinez2025]. For the remaining studies the split is not reported. Two studies evaluate across acquisition conditions instead, which is the stronger design: training on pristine spectra and testing on a spiked filter set [@smolen2025pnas], and testing against independent external libraries with an explicit accuracy loss on real-world material [@williams2025]. Reported accuracies cluster above 0.96 and reach a mean F1 of 0.99995 [@rosalesmartinez2025], which is what a spectrum-level random split produces when replicate spectra of one specimen fall on both sides of the split. The comparison axis in this article is therefore the split, not the headline accuracy."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Uncertainty attached to an individual decision is almost absent. The clearest positive case returns a conditional class distribution per spectrum and uses disagreement with human annotators to expose labelling errors [@herb2025humans]. A second separates compositions absent from training, which is open-set detection rather than a calibrated per-decision confidence [@smolen2025pnas]. A third tests replicate consistency without producing a per-spectrum confidence [@williams2025], and a fourth addresses identification uncertainty only through the choice of spectral library [@bendell2024unc]. No retrieved study produces a per-decision accept, reject or defer gate, which is the space the present rule occupies."
+    },
+    {
+     "type": "h2",
+     "text": "RELATED WORK IN THIS JOURNAL"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "This journal has published both strands of research that the present work joins, which is why it was selected. On the application side, optical identification of polyethylene terephthalate bottles for recycling has been reported here using polarisation imaging [@tan2021pet], a convolutional model has been applied to near-infrared spectra of blended fabrics for quantitative composition analysis [@tao2023nir], and a multimodal sensing-to-sorting pipeline for waste classification has been described recently [@jitngernmadan2026sorting]. On the interpretability side, attention mechanisms have been used to make a medical-waste sorter inspectable [@kikome2026interp]. The formal apparatus used here also has a history in this journal, in domains other than spectroscopy: three-way decision has been combined with deep learning under hierarchical linguistic information [@abdullah2024twd], and rough-set theory has been used to select features for a downstream classifier [@setu2025rsthfs]. In the second of these the rough set is a preprocessing stage and the decision is still taken by a black box, which is the arrangement the present article inverts: here the rough set is the classifier, and the third outcome it admits is the referral. Each of the studies cited in this subsection reports an aggregate accuracy over a fixed test set, and none states, for an individual item, whether the evidence sufficed. The present article addresses exactly that gap in the same application domain, and it does so with a construction whose decision boundary is written in named spectral quantities rather than recovered from a trained model after the fact. The literature base reviewed in this section was assembled with an embedding-based screening and bibliometric validation procedure reported previously [@matysik2026mapping], and the use of machine assistance in preparing this manuscript follows the reporting conventions set out in [@matysik2025aimono]."
+    },
+    {
+     "type": "h2",
+     "text": "ABSTENTION AS AN ESTABLISHED DEVICE"
+    },
+    {
+     "type": "para",
+     "text": "Allowing a classifier to abstain is not new, and the present work does not claim it as such. The error-reject trade-off was formalised by Chow [@chow1970], who derived the optimum rule for rejecting a pattern when the cost of an error exceeds the cost of a referral, and the device has since developed into a field of its own, surveyed by Hendrickx and colleagues [@hendrickx2024]. Conformal prediction [@vovk2005] reaches a related end by a different route, returning a set of candidate labels whose marginal coverage, in the conformal sense of the probability that the set contains the true label, is guaranteed under exchangeability. What distinguishes the construction used here is where the referral set comes from. In reject-option learning and in conformal prediction the abstention region is defined on a continuous score, a posterior probability or a nonconformity measure, and its size is set by a threshold calibrated on held-out data. Here it is the boundary region of a rough-set partition: a specimen is referred when the cell of named attribute values it falls into contains more than one polymer in the training data. The referral set is therefore a structural property of the partition, it can be enumerated before any test specimen is seen, and it is reportable as a list of attribute intervals rather than as a score cut-off. The practical consequence is that a laboratory can state in advance which regions of attribute space it will not decide in, which a calibrated score threshold does not provide."
+    },
+    {
+     "type": "h2",
+     "text": "INTERPRETABILITY BY DESIGN AND ITS ALTERNATIVE"
+    },
+    {
+     "type": "para",
+     "text": "The taxonomy separating transparent models from post-hoc explanation is set out by Barredo Arrieta and colleagues [@barredoarrieta2020]. The methods criticised here are the standard additive attribution of Lundberg and Lee [@lundberg2017] and the local surrogate of Ribeiro, Singh and Guestrin [@ribeiro2016]. The criticism rests on four independent results already cited in Section I. One asymmetry is worth naming: a recent FTIR study uses post-hoc attribution to locate informative fingerprint regions and then discards the explanation, keeping only the trained model [@yan2023]. The design used here keeps those regions as the model."
+    },
+    {
+     "type": "h2",
+     "text": "ASSOCIATION RULES, ROUGH SETS AND THREE-WAY DECISIONS"
+    },
+    {
+     "type": "para",
+     "text": "Support and confidence are used in the sense of Agrawal, Imielinski and Swami [@agrawal1993], with the ranking caution of Geng and Hamilton [@geng2006], since those two quantities alone do not order rules usefully. The pair construction used in Section III is closest to the simplified single-step action-rule strategy of Ras and Dardzinska [@ras2006simpl], which builds rules from objects that agree on stable attributes and differ in one flexible attribute. Turning the present descriptive rules into actionable ones would additionally require the cost and feasibility considerations of Tzacheva and Ras [@tzacheva2005], which are outside the present scope."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Indiscernibility, the lower and upper approximation, the boundary region and the quality of approximation are used as defined by Pawlak [@pawlak1982], [@pawlak2007rudiments], with the variable-precision extension of Ziarko [@ziarko1993] as the mechanism that would make the inclusion threshold tunable. The three-way decision is taken from Yao: the derivation of accept, reject and defer regions from loss functions [@yao2010prob], the general trisecting framing [@yao2012outline], the argument that three regions dominate two when misclassification costs are asymmetric [@yao2011superior], and the current tri-level formulation [@yao2019trilevel]. The closest applied precedent is a three-way decision layer over Bayesian deep learning producing a deferral class in skin-cancer classification [@abdar2021skin3wd]."
+    },
+    {
+     "type": "h2",
+     "text": "ACCEPTANCE SAMPLING AND RECYCLATE STANDARDS"
+    },
+    {
+     "type": "para",
+     "text": "EN 15347-1:2024 defines what a supplier must declare about a sorted plastics stream and is the document that frames the acceptance problem. EN 15343:2007 remains the reference for traceability and recycled content, and EN 15344:2025 covers characterisation of polyethylene recyclates. EN 18065:2025 ties recyclate classification to data-quality levels for digital trading, which gives the information-asymmetry argument of Section I a standards-based form. The lot-by-lot sampling system against which a three-way rule should be compared is ISO 2859-1, and the vocabulary of the operating-characteristic curve, producer risk and consumer risk follows Schilling and Neubauer [@schilling2017]. Standard designations were verified against catalogue records only; readers should confirm the edition in force before contractual use, and Section VI states which designations could not be confirmed at page level."
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,1462 @@
+{
+ "title": "A Glass-Box Classifier for FTIR Identification of Plastics: Accuracy Parity on Accepted Specimens With an Explicit Referral Rate",
+ "authors_line": "PUTI SINANSARI1, PAWEL KAROL FRANKOWSKI2, MARCIN MAKA2, RYSZARD DANIEL ZIETEK3, RADOSLAW GORDON3, TOMASZ STAWICKI4, AND SEBASTIAN MATYSIK5",
+ "affiliations": [
+  "1Business Management Department, Institut Teknologi Sepuluh Nopember (ITS), Surabaya, Indonesia",
+  "2Faculty of Computer Science and Telecommunications, Maritime University of Szczecin, Waly Chrobrego 1-2, 70-500 Szczecin, Poland",
+  "3Faculty of Mechatronics and Electrical Engineering, Maritime University of Szczecin, Willowa 2, 71-650 Szczecin, Poland",
+  "4Faculty of Environmental Management and Agriculture, West Pomeranian University of Technology in Szczecin, Papieza Pawla VI Street 1, 71-459 Szczecin, Poland",
+  "5Institute of Management, Doctoral School, University of Szczecin, al. Papieza Jana Pawla II 22a, 70-453 Szczecin, Poland"
+ ],
+ "corresponding": "Corresponding author: Sebastian Matysik (sebastian.matysik@usz.edu.pl). E-mail addresses: P. Sinansari (puti@its.ac.id), P. K. Frankowski (frankowski.p.k@gmail.com), M. Maka (m.maka@pm.szczecin.pl), R. D. Zietek (r.zietek@pm.szczecin.pl), R. Gordon (r.gordon@pm.szczecin.pl), T. Stawicki (tomasz.stawicki@zut.edu.pl).",
+ "funding": "",
+ "abstract": "A circular economy for plastics turns on one decision: whether recovered polymer is what it is declared to be. Infrared identification delegates it to unauditable models, so conforming material is downcycled and rejections cannot be contested. This study asks whether named spectral quantities can replace them at laboratory-grade accuracy, and at what cost in refusals. Nine attributes, amplitude, shape correlation and offset over three absorption windows, are extracted with noise-calibrated thresholds; a rough-set rule over at most two decides, abstaining when evidence is weak. On 3000 public specimens of six polymers it reaches 0.9973 balanced accuracy on the 75.3% accepted, against 0.9997 for the strongest baseline on all specimens, non-inferior at a one-point margin; forced to decide, 0.9480. Given the same referral budget the baselines are perfect on what they keep: the gain is a refusal expressed in named physical quantities, at a cost of 0.0027 in accuracy. Across twenty refits it selects the same pair 19 times, though post-hoc attribution is no less stable at matched size. In an acceptance sampling plan it raises producer risk from 0.3950 to 0.6316 at 1% defectives. Two inferences for a circular economy follow. Referral is not uniform across materials, 4.8% for poly(ethylene terephthalate) against 66.2% for low-density polyethylene, locating the verification cost of recyclate in polyolefins. And because misclassification raises producer risk far more than consumer risk, the supplier of conforming recyclate absorbs measurement uncertainty, an incentive to downcycle that explicit referral prices instead of hiding. Data, code and protocol are released.",
+ "index_terms": "Acceptance sampling, circular economy, explainable artificial intelligence, Fourier transform infrared spectroscopy, interpretable machine learning, polymer identification, recycling, rough set theory",
+ "sections": [
+  {
+   "heading": "INTRODUCTION",
+   "blocks": [
+    {
+     "type": "para",
+     "text": "Secondary plastics are traded on claims about their composition. A buyer who cannot verify those claims at the point of sale prices the material for the average of what the market supplies, which drives better material out of the market and thins it, the mechanism described for used goods by Akerlof [1] and applied to recycling markets by Nicolli, Johnstone and Soderholm [2]. Empirical work on European streams confirms that the binding constraint on closed-loop recycling is quality rather than collected volume [3], [4], and that a technically adequate recyclate is still frequently refused by buyers [5]. Verification is therefore not only a measurement problem; it is the instrument through which a quality claim becomes credible."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Fourier transform infrared spectroscopy, FTIR, is the routine way to establish what a polymer is, and its band assignments for the common commodity polymers are well established [6]. The decision itself is increasingly delegated to supervised classifiers, and their reported accuracies are high. The difficulty is what such a result can be used for. A buyer who rejects a consignment, a laboratory that signs a certificate, or an auditor who checks a recycled-content declaration under EN 15343 needs to state why a specific specimen was classified as it was, and needs to know when the evidence was too weak to decide. An aggregate accuracy figure answers neither question."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The usual remedy is to explain the model after it has been trained. That remedy is itself contested. Rudin argues that for consequential decisions one should build an interpretable model rather than explain an opaque one [7]; Lipton shows that interpretability is not a single property and that claims about it must name which property is meant [8]. Post-hoc attribution has specific documented failure modes: it can be deliberately manipulated by an adversarially constructed model [9], it depends on a reference distribution that is rarely justified [10], it changes under input perturbations that leave the prediction unchanged [11], [12], and several saliency methods fail basic sanity checks [13]. An explanation that changes between two fits of the same model on the same data cannot support a contractual decision."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "This article takes the alternative route. The model is built from quantities that a spectroscopist can name before any data are seen: the amplitude, the shape correlation and the baseline offset of three absorption windows chosen from polymer chemistry. The detection threshold of each quantity is calibrated from instrument noise, so the model knows how large a difference has to be before it counts as a difference at all. A classifier of this kind is called a glass box here, in contrast to a black box: not a model that has been explained after training, but one whose decision boundary is written in those named quantities from the outset, so that reading the rule and reading the explanation are the same act. The decision is taken by a rough-set rule [14] over at most two of these quantities, and the rule is allowed a third outcome, refer, when the specimen falls in a region where the training data do not determine the class."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The contribution is not that such a model is more accurate. It is not. The contribution is threefold. The shortfall becomes an explicit, measurable quantity, the referral rate, instead of an unquantified risk distributed invisibly across every decision. The attribute set the model uses is stable across repeated fits, which post-hoc attribution on the same data is not. And the referral rate converts directly into the vocabulary of acceptance sampling, where it can be priced as producer and consumer risk."
+    },
+    {
+     "type": "h2",
+     "text": "RESEARCH OBJECTIVE AND QUESTIONS"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "The objective of this study is to determine whether polymer identification from infrared spectra can be performed by a classifier that is interpretable by construction, at an accuracy that a laboratory would accept. The second half of the objective is to quantify what that choice costs, in the quantity that determines commercial cost: the proportion of specimens on which the classifier declines to decide. The objective is deliberately not to maximise accuracy. It is to establish whether an auditable decision can be obtained at a stated and measurable price, and to express that price in the terms a supply contract already uses."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Three questions follow from that objective, and each is answered in Section IV from the computations reported there. RQ1: does a rule over a small number of named spectral quantities reach the accuracy of conventional classifiers on the specimens it accepts, and what referral rate does that parity require? RQ2: are the quantities such a rule selects more stable across refits than the quantities a post-hoc attribution method identifies as important, the property on which a written specification would have to rely? RQ3: how does the referral rate translate into producer and consumer risk once the classifier is placed inside a conventional acceptance sampling plan, and who bears the cost of an imperfect inspection? A fourth question, whether a rule of this kind is more data-efficient than a black-box model, was posed in the frozen protocol and is answered in the negative, which is reported as a result rather than omitted."
+    },
+    {
+     "type": "h2",
+     "text": "CONTRIBUTIONS"
+    },
+    {
+     "type": "para",
+     "text": "The specific contributions are as follows. First, a classifier for FTIR polymer identification is constructed entirely from named spectral quantities with a noise-calibrated detection threshold, and is evaluated against four conventional classifiers on identical splits of 3000 specimens. Second, the three-way decision rule of Yao [15], [16] is instantiated on rough-set approximations of those quantities, and the resulting referral rate is reported as a primary result rather than suppressed. Third, the stability of the selected attribute set is measured across repeated fits and contrasted with the stability of a post-hoc attribution ranking computed on the same representation. Fourth, the referral rate is mapped onto single-stage acceptance sampling, giving the producer and consumer risk that an imperfect inspector implies. Fifth, the full protocol was frozen and version-tagged before any modelling result was produced, and is released together with the code, the derived tables and the data."
+    },
+    {
+     "type": "h2",
+     "text": "WHAT THIS ARTICLE DOES NOT CLAIM"
+    },
+    {
+     "type": "para",
+     "text": "Three limits are stated at the outset because they bound every result that follows. The method is not claimed to establish fitness for purpose of any material; it identifies a polymer and reports when it cannot. The rules reported here are association rules in the sense of Agrawal, Imielinski and Swami [17], not action rules in the sense of Ras and Tsay [18], because the observational data used here contains no intervention. Batch-level acceptance is treated as a design calculation on top of per-specimen decisions, not as an empirical result."
+    }
+   ]
+  },
+  {
+   "heading": "RELATED WORK",
+   "blocks": [
+    {
+     "type": "h2",
+     "text": "MACHINE LEARNING FOR FTIR POLYMER IDENTIFICATION"
+    },
+    {
+     "type": "para",
+     "text": "The retrieved literature divides cleanly by model family: chemometric discriminant methods [19], tree ensembles [20], [21], [22], kernel and instance methods [23], [24], [25], and deep models including one-dimensional convolutional networks [26], [27], dense networks [28] and generative augmentation [29]. No retrieved study applies a transformer to FTIR polymer identification, and that absence is stated rather than filled with a study from another modality."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The weakness that can be assessed from the published text is not the model family but the evaluation design. Of fifteen studies examined, only three describe the data split in the retrievable text, and all three split at the level of the spectrum rather than the specimen or the batch: Monte Carlo cross-validation [20], ten-fold cross-validation [23], and stratified repeated cross-validation with a hold-out set [22]. For the remaining studies the split is not reported. Two studies evaluate across acquisition conditions instead, which is the stronger design: training on pristine spectra and testing on a spiked filter set [27], and testing against independent external libraries with an explicit accuracy loss on real-world material [25]. Reported accuracies cluster above 0.96 and reach a mean F1 of 0.99995 [22], which is what a spectrum-level random split produces when replicate spectra of one specimen fall on both sides of the split. The comparison axis in this article is therefore the split, not the headline accuracy."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Uncertainty attached to an individual decision is almost absent. The clearest positive case returns a conditional class distribution per spectrum and uses disagreement with human annotators to expose labelling errors [28]. A second separates compositions absent from training, which is open-set detection rather than a calibrated per-decision confidence [27]. A third tests replicate consistency without producing a per-spectrum confidence [25], and a fourth addresses identification uncertainty only through the choice of spectral library [30]. No retrieved study produces a per-decision accept, reject or defer gate, which is the space the present rule occupies."
+    },
+    {
+     "type": "h2",
+     "text": "RELATED WORK IN THIS JOURNAL"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "This journal has published both strands of research that the present work joins, which is why it was selected. On the application side, optical identification of polyethylene terephthalate bottles for recycling has been reported here using polarisation imaging [31], a convolutional model has been applied to near-infrared spectra of blended fabrics for quantitative composition analysis [32], and a multimodal sensing-to-sorting pipeline for waste classification has been described recently [33]. On the interpretability side, attention mechanisms have been used to make a medical-waste sorter inspectable [34]. The formal apparatus used here also has a history in this journal, in domains other than spectroscopy: three-way decision has been combined with deep learning under hierarchical linguistic information [35], and rough-set theory has been used to select features for a downstream classifier [36]. In the second of these the rough set is a preprocessing stage and the decision is still taken by a black box, which is the arrangement the present article inverts: here the rough set is the classifier, and the third outcome it admits is the referral. Each of the studies cited in this subsection reports an aggregate accuracy over a fixed test set, and none states, for an individual item, whether the evidence sufficed. The present article addresses exactly that gap in the same application domain, and it does so with a construction whose decision boundary is written in named spectral quantities rather than recovered from a trained model after the fact. The literature base reviewed in this section was assembled with an embedding-based screening and bibliometric validation procedure reported previously [37], and the use of machine assistance in preparing this manuscript follows the reporting conventions set out in [38]."
+    },
+    {
+     "type": "h2",
+     "text": "ABSTENTION AS AN ESTABLISHED DEVICE"
+    },
+    {
+     "type": "para",
+     "text": "Allowing a classifier to abstain is not new, and the present work does not claim it as such. The error-reject trade-off was formalised by Chow [39], who derived the optimum rule for rejecting a pattern when the cost of an error exceeds the cost of a referral, and the device has since developed into a field of its own, surveyed by Hendrickx and colleagues [40]. Conformal prediction [41] reaches a related end by a different route, returning a set of candidate labels whose marginal coverage, in the conformal sense of the probability that the set contains the true label, is guaranteed under exchangeability. What distinguishes the construction used here is where the referral set comes from. In reject-option learning and in conformal prediction the abstention region is defined on a continuous score, a posterior probability or a nonconformity measure, and its size is set by a threshold calibrated on held-out data. Here it is the boundary region of a rough-set partition: a specimen is referred when the cell of named attribute values it falls into contains more than one polymer in the training data. The referral set is therefore a structural property of the partition, it can be enumerated before any test specimen is seen, and it is reportable as a list of attribute intervals rather than as a score cut-off. The practical consequence is that a laboratory can state in advance which regions of attribute space it will not decide in, which a calibrated score threshold does not provide."
+    },
+    {
+     "type": "h2",
+     "text": "INTERPRETABILITY BY DESIGN AND ITS ALTERNATIVE"
+    },
+    {
+     "type": "para",
+     "text": "The taxonomy separating transparent models from post-hoc explanation is set out by Barredo Arrieta and colleagues [42]. The methods criticised here are the standard additive attribution of Lundberg and Lee [43] and the local surrogate of Ribeiro, Singh and Guestrin [44]. The criticism rests on four independent results already cited in Section I. One asymmetry is worth naming: a recent FTIR study uses post-hoc attribution to locate informative fingerprint regions and then discards the explanation, keeping only the trained model [45]. The design used here keeps those regions as the model."
+    },
+    {
+     "type": "h2",
+     "text": "ASSOCIATION RULES, ROUGH SETS AND THREE-WAY DECISIONS"
+    },
+    {
+     "type": "para",
+     "text": "Support and confidence are used in the sense of Agrawal, Imielinski and Swami [17], with the ranking caution of Geng and Hamilton [46], since those two quantities alone do not order rules usefully. The pair construction used in Section III is closest to the simplified single-step action-rule strategy of Ras and Dardzinska [47], which builds rules from objects that agree on stable attributes and differ in one flexible attribute. Turning the present descriptive rules into actionable ones would additionally require the cost and feasibility considerations of Tzacheva and Ras [48], which are outside the present scope."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Indiscernibility, the lower and upper approximation, the boundary region and the quality of approximation are used as defined by Pawlak [14], [49], with the variable-precision extension of Ziarko [50] as the mechanism that would make the inclusion threshold tunable. The three-way decision is taken from Yao: the derivation of accept, reject and defer regions from loss functions [15], the general trisecting framing [16], the argument that three regions dominate two when misclassification costs are asymmetric [51], and the current tri-level formulation [52]. The closest applied precedent is a three-way decision layer over Bayesian deep learning producing a deferral class in skin-cancer classification [53]."
+    },
+    {
+     "type": "h2",
+     "text": "ACCEPTANCE SAMPLING AND RECYCLATE STANDARDS"
+    },
+    {
+     "type": "para",
+     "text": "EN 15347-1:2024 defines what a supplier must declare about a sorted plastics stream and is the document that frames the acceptance problem. EN 15343:2007 remains the reference for traceability and recycled content, and EN 15344:2025 covers characterisation of polyethylene recyclates. EN 18065:2025 ties recyclate classification to data-quality levels for digital trading, which gives the information-asymmetry argument of Section I a standards-based form. The lot-by-lot sampling system against which a three-way rule should be compared is ISO 2859-1, and the vocabulary of the operating-characteristic curve, producer risk and consumer risk follows Schilling and Neubauer [54]. Standard designations were verified against catalogue records only; readers should confirm the edition in force before contractual use, and Section VI states which designations could not be confirmed at page level."
+    }
+   ]
+  },
+  {
+   "heading": "MATERIALS AND METHOD",
+   "blocks": [
+    {
+     "type": "h2",
+     "text": "PROVENANCE OF THE ALGORITHM"
+    },
+    {
+     "type": "para",
+     "text": "The procedure applied here was not devised for spectroscopy. It was developed for a non-destructive magnetic method that evaluates reinforced concrete, where the task is to say which structural parameter changed when a measured waveform changes, without a labelled training set that pairs the two. Three elements are taken over unchanged. The decomposition of a waveform window into amplitude, correlation and offset, and the selection algorithm that ranks those quantities by their sensitivity to a parameter, are due to Frankowski and colleagues [55]. The restriction of association rules to exclusive patterns, which is what makes a rule attributable to a single parameter, is due to the same group [56]. The pseudocode, the quality-evaluation step and the four modifications to the classical frequent-itemset search are stated in the corrosion study [57]. What this article contributes is the transfer of that procedure to infrared spectra, the calibration of its detection threshold from instrument noise rather than from a chosen quantisation step, and the coupling of its boundary region to a referral decision that can be priced.",
+     "indent": false
+    },
+    {
+     "type": "table",
+     "number": "I",
+     "caption": "Datasets and their roles.",
+     "header": [
+      "Role",
+      "Collection",
+      "Content",
+      "Supports"
+     ],
+     "rows": [
+      [
+       "Primary",
+       "FTIR-Plastics, Zenodo record 10736650, CC BY 4.0",
+       "3000 specimens, six polymers, 500 each, 399.2 to 4001.6 cm-1, 8 and 4 cm-1 resolution",
+       "Parity, learning curves, rough-set bounds, stability"
+      ],
+      [
+       "Transfer case",
+       "Recyclate FTIR archive, Zenodo 21822279, CC BY 4.0",
+       "356 spectra, 54 particles, 17 labelled, three waste streams",
+       "Provenance, readability, applied discussion"
+      ]
+     ]
+    },
+    {
+     "type": "para",
+     "text": "In the original formulation a rule is written as (1), with the two quality measures of the classical algorithm defined in (2) and (3) [17], [56].",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "A \\to B \\; [\\text{supp}, \\text{conf}]",
+     "number": 1
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where A is the antecedent of the rule and B its consequent; supp is the support of the rule and conf its confidence, both defined below. In this formulation A is restricted to a single element drawn from the set Y of parameters of the examined object, while B is drawn only from the set X of quantities that describe the measured signal. That restriction, together with the replacement of a support threshold by an explicit quality criterion, is what distinguishes this algorithm from a classical frequent-itemset search [57]."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{supp}(A) = \\frac{\\#\\{d_i \\in D : A \\subseteq d_i\\}}{\\#D}",
+     "number": 2
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where D is the database of records and d_i is one record in it; #D is the number of records in D; and A is an itemset. Support is therefore the fraction of records in which the itemset appears in full."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{conf}(A \\to B) = \\frac{\\text{supp}(A \\cup B)}{\\text{supp}(A)} \\approx P(B \\mid A)",
+     "number": 3
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where A and B are the antecedent and the consequent; supp(A union B) is the support of the two occurring together; and P(B | A) is the conditional probability of observing B given A, which confidence estimates from the database."
+    },
+    {
+     "type": "h2",
+     "text": "DATA"
+    },
+    {
+     "type": "para",
+     "text": "Table 1 summarises both collections. The primary dataset is FTIR-Plastics [58], a public collection of transmittance spectra of the six most widely produced industrial polymers: polyethylene terephthalate, high-density polyethylene, poly(vinyl chloride), low-density polyethylene, polypropylene and polystyrene. It contains 3000 specimens, 500 per polymer, each measured twice on the same instrument at two spectral resolutions, 8 and 4 cm⁻¹, with 32 scans, over 399.2 to 4001.6 cm⁻¹, giving 1869 and 3736 points respectively. The 8 cm⁻¹ subset is used throughout; the 4 cm⁻¹ subset is used only as a resolution sensitivity. Polymer identity is a property of the specimen known to the depositor and is not derived from any spectral matching procedure, which is the reason this collection and not the recyclate archive carries the methodological claims."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The transfer case is a public archive [59] of FTIR spectra of plastic particles recovered from organic fertiliser, compost-amended soil and wastewater-irrigated soil. It contains 356 spectra over 54 particles, of which 17 particles and 172 spectra carry a polymer label. An audit of this archive before any modelling established three facts that bound what it can support, and all three are reported here because they are easy to overlook. Its metadata table carries, alongside each spectrum, the record of the reference-library entry matched to it by an open spectral-matching tool [60], so the fields naming polymer, morphology and colour describe the library match rather than an independently established property of the particle. Its quality verdict is produced by the archive's own automated thresholds, a library match score of 0.8 and a signal-to-noise ratio of 4, and not by visual inspection or an expert, giving 192 passes against 14 failures. And the unit of analysis is the particle, not the spectrum: one particle contributes up to 92 spectra."
+    },
+    {
+     "type": "h2",
+     "text": "ATTRIBUTES"
+    },
+    {
+     "type": "para",
+     "text": "Three windows are fixed a priori from the infrared band assignments established for these polymers [6] and confirmed to lie inside the measured range: W1 from 2800 to 3000 cm⁻¹, carbon-hydrogen stretching; W2 from 1650 to 1800 cm⁻¹, carbonyl; W3 from 1350 to 1500 cm⁻¹, methylene and methyl deformation. Within each window three attributes are computed. The amplitude A is the difference between the maximum and the minimum of the window. The offset O is the minimum, which carries the local baseline. The correlation C is the Pearson product-moment correlation between the window after min-max normalisation and a template, where the template is the median spectrum of the training split, normalised the same way. This yields nine attributes per spectrum. Amplitude is compared on a logarithmic scale and the other two on an absolute scale, so that a change is expressed in units in which the noise model is valid."
+    },
+    {
+     "type": "figure",
+     "file": "matys9.png",
+     "number": 1,
+     "caption": "Mean transmittance spectrum of each polymer, with the three fixed analysis windows shaded. Every attribute used by the rule is computed inside one of these three bands; the remaining 1610 channels enter no decision.",
+     "width": 6.9
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Fig. 1 makes the construction concrete. It shows the mean spectrum of each of the six polymers with the three windows shaded, and two things are visible at once. The windows cover a small fraction of the measured range, so the rule reads 259 of the 1869 channels, 104 in the stretching window and 78 and 77 in the other two, and ignores the remaining 1610 by design, not by learned weighting. And the polymers separate inside those windows in ways a spectroscopist can name: polyethylene terephthalate carries a deep carbonyl absorption that the polyolefins lack entirely, polystyrene and poly(vinyl chloride) differ from the polyolefins in the deformation window, and the two polyethylenes differ from polypropylene mainly in the shape, not the depth, of the carbon-hydrogen stretching band. The attributes defined below are the three ways of summarising a window that correspond to those three kinds of difference."
+    },
+    {
+     "type": "para",
+     "text": "Each window W of a spectrum s contributes three quantities, defined in (4) to (6).",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "A_W(s) = \\max_{\\nu \\in W} s(\\nu) - \\min_{\\nu \\in W} s(\\nu)",
+     "number": 4
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where s is one spectrum; W is one of the three fixed analysis windows; nu is wavenumber; and A_W is the amplitude of the window, that is the height from its lowest to its highest point. Amplitude responds to how much material is present and to path length."
+    },
+    {
+     "type": "eq",
+     "latex": "O_W(s) = \\min_{\\nu \\in W} s(\\nu)",
+     "number": 5
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where O_W is the offset of the window, the lowest value the window reaches. The offset carries the local baseline, which in transmittance spectra reflects scattering and sample presentation rather than chemistry."
+    },
+    {
+     "type": "eq",
+     "latex": "C_W(s) = \\frac{\\sum_{\\nu \\in W} (\\hat{s}(\\nu) - \\overline{\\hat{s}})(T_W(\\nu) - \\overline{T_W})}{\\sqrt{\\sum_{\\nu \\in W}(\\hat{s}(\\nu) - \\overline{\\hat{s}})^2 \\sum_{\\nu \\in W}(T_W(\\nu) - \\overline{T_W})^2}}",
+     "number": 6
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where T_W is a fixed template for window W, taken as the median shape of the training spectra in that window; the hat denotes the window after min-max normalisation, obtained by subtracting O_W and dividing by A_W; and the overbar denotes the arithmetic mean over the window. Because the normalisation removes both height and baseline, C_W measures shape alone. Three windows therefore yield nine named quantities, and every later step operates on those nine and never on the 1869 raw channels."
+    },
+    {
+     "type": "h2",
+     "text": "DETECTION THRESHOLD"
+    },
+    {
+     "type": "para",
+     "text": "A difference between two specimens counts only if it exceeds what the instrument could have produced by itself. Because the primary collection contains no replicate acquisition under fixed conditions, instrument noise is estimated per spectrum as the high-frequency residual left by a Savitzky-Golay filter [61] of window 11 and polynomial order 3. Across the 3000 specimens the median of this estimate is 0.1082 transmittance units and its 95th percentile is 0.1593. That noise is then propagated into each of the nine attributes by Monte Carlo perturbation of the spectrum, and the worst case over the six polymers is taken, giving a per-attribute standard deviation. The detection threshold is k times that standard deviation, with k set to 4 and varied over 3 and 5 as a sensitivity. The companion quantity, the ratio of between-specimen spread to the noise standard deviation itself, is the entry condition: if it is near unity the data cannot support the method at all. Fig. 2 shows the margin per polymer. Here it ranges from 25.5 for low-density polyethylene to 56.9 for polyethylene terephthalate. Measured against the threshold rather than against the noise, that is after division by k, the same ratios run from 6.4 to 14.2, so the condition is satisfied with a wide margin on either reading."
+    },
+    {
+     "type": "para",
+     "text": "The threshold is obtained in three steps, (7) to (9). Instrument noise is estimated per spectrum, propagated into each attribute by Monte Carlo simulation, and converted into a minimum difference that a change must exceed before it is recorded at all.",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "\\sigma_i = \\text{SD}\\left(s_i - \\text{SG}_{11,3}(s_i)\\right)",
+     "number": 7
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where s_i is the i-th spectrum and SG is a Savitzky-Golay filter of window length 11 and polynomial order 3 [61]. The filter follows the absorption bands but not the point-to-point fluctuation, so the standard deviation of the residual it leaves is an estimate of instrument noise for that spectrum. This substitutes for replicate scans, which the dataset does not provide."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{sens.min}_j = k \\cdot \\max_{c \\in C} \\; \\text{med}_{i \\in c} \\; \\text{SD}\\left(f_j(s_i + \\varepsilon) - f_j(s_i)\\right), \\quad \\varepsilon \\sim N(0, \\sigma_i^2)",
+     "number": 8
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where f_j is the j-th of the nine attributes; epsilon is a noise draw from a normal distribution with the per-spectrum standard deviation of (7); C is the set of measurement conditions; med is the median over the spectra acquired under one condition; and k is the multiplier that sets how many noise standard deviations a change must exceed. The maximum over conditions makes the threshold a worst case rather than an average. The frozen protocol fixes k at 4 and varies it at 3 and 5 as a sensitivity analysis."
+    },
+    {
+     "type": "eq",
+     "latex": "\\ell_j(\\Delta) = \\uparrow \\text{ if } \\Delta > \\text{sens.min}_j, \\; \\downarrow \\text{ if } \\Delta < -\\text{sens.min}_j, \\; - \\text{ otherwise}",
+     "number": 9
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where Delta is the difference in attribute j between two specimens and the arrows are the ternary labels increase, decrease and no change used by the source algorithm [57]. Replacing a chosen quantisation step by a noise-derived threshold is the one change this article makes to the sensitivity mechanism of that method."
+    },
+    {
+     "type": "h2",
+     "text": "RULES OVER PAIRS"
+    },
+    {
+     "type": "para",
+     "text": "Rules are mined over pairs of specimens rather than over single records, because the question asked is how an attribute responds when one factor changes and everything else is held fixed. A pair enters the database only if the two specimens differ in the factor under test, come from different specimens, and agree on every other factor. Each attribute difference is then labelled on three levels, increase, no change, or decrease, against that attribute's threshold. Weighted support and confidence follow, with Wilson score intervals [62] for the confidence and a permutation test with Benjamini-Hochberg control of the false discovery rate [63]. For the primary task the number of admissible pairs is of the order of 3.75 million, so each ordered pair of polymer values is capped at 2000 draws with a fixed seed; the cap is a sampling of the database and not a change to its definition, and its effect is reported."
+    },
+    {
+     "type": "para",
+     "text": "A pair enters the database only under condition (10), and the confidence of a rule over that database is computed as (11) with the interval (12).",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "\\Pi_y = \\{(i,j) : y_i \\neq y_j, \\; g_i \\neq g_j, \\; z_i = z_j \\}",
+     "number": 10
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where Pi_y is the set of admissible pairs for parameter y; y_i and y_j are the parameter values of the two specimens, which must differ; g_i and g_j are their group labels, which must also differ so that a pair never comes from one group; and z_i and z_j collect every other parameter, which must agree. The three conditions together make the pair differ in one parameter only, which is what allows the observed change to be attributed to that parameter."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{conf}(y \\to \\ell_j) = \\frac{\\sum_{(i,j') \\in \\Pi_y} w_{ij'} \\, I[\\ell_j \\neq -]}{\\sum_{(i,j') \\in \\Pi_y} w_{ij'}}",
+     "number": 11
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where w is the product of the two specimen weights, which balances classes of unequal size; the indicator is one when the attribute moved beyond its threshold in either direction and zero when it did not; and the sum runs over the admissible pairs of (10). Confidence is therefore the weighted fraction of admissible pairs in which the attribute responded."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{CI} = \\frac{\\hat{p} + \\frac{z^2}{2n} \\pm z \\sqrt{\\frac{\\hat{p}(1-\\hat{p})}{n} + \\frac{z^2}{4n^2}}}{1 + \\frac{z^2}{n}}",
+     "number": 12
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where p-hat is the observed confidence, n is the number of admissible pairs and z is the standard normal quantile, 1.96 for a 95% interval [62]. The Wilson form is used rather than the normal approximation because confidences close to one are common here and the normal interval would exceed one. Significance is assessed by permuting the parameter labels within strata and controlling the false discovery rate across all attribute and parameter combinations [63]."
+    },
+    {
+     "type": "h2",
+     "text": "ROUGH SETS AND THE THREE-WAY DECISION"
+    },
+    {
+     "type": "para",
+     "text": "Each selected attribute is discretised into bins whose width is its own detection threshold, so that two specimens in the same cell differ by less than that threshold on every selected attribute. The converse does not hold: the bin edges sit on a fixed grid, so two specimens closer than the threshold but on opposite sides of an edge are placed in different cells. Indiscernibility here is therefore the equality of bin indices, not a statement that the instrument could not tell the two apart, and the dependence of the results on where the grid starts is treated as one of the open choices in Section IV-G. The construction follows Pawlak [14]. For a class X and an attribute set B, the lower approximation collects the cells that contain only members of X, and the upper approximation collects the cells that contain at least one. The boundary region is their difference. Two summary quantities follow: the accuracy of approximation, the ratio of the sizes of the lower and upper approximations for one class, and the quality of approximation, the fraction of all specimens that fall in some lower approximation. At test time a specimen falling in a cell of a lower approximation receives that class; any other specimen is referred. Referral is a decision outcome, not an error. Two names are used for the same quantity throughout and are fixed here: coverage is the share of specimens on which the rule issues a verdict, and the referral rate is one minus coverage. Both are given as percentages in running text and as proportions in the tables. Two modes of the same rule are also reported throughout: the forced-choice mode, in which the referral outcome is disabled and the rule must name a polymer for every specimen, and the accepted-specimen figure, computed only on the specimens it does not refer."
+    },
+    {
+     "type": "para",
+     "text": "The partition induced by the selected attributes supports the classical rough-set quantities (13) to (17), and the decision rule (18) [14], [15].",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "\\underline{B}(X) = \\bigcup \\{ E \\in U/B : E \\subseteq X \\}",
+     "number": 13
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where U is the set of specimens, B the selected attribute set, U/B the partition of U into cells and E one such cell; two specimens fall in the same cell when every selected attribute falls in the same threshold-wide bin, which implies agreement to within that threshold but is not implied by it, because the bin edges are fixed. X is the set of specimens of one polymer. The lower approximation collects the cells that contain members of X only, and is therefore the part of X that the attributes resolve unambiguously. The word certainty is used throughout in this technical sense: a cell is certain when every training specimen in it carries the same label. It is a property of the partition, not a guarantee that a new specimen falling in that cell is correctly classified, and the held-out accuracy reported in Section IV is what measures the latter."
+    },
+    {
+     "type": "eq",
+     "latex": "\\overline{B}(X) = \\bigcup \\{ E \\in U/B : E \\cap X \\neq \\emptyset \\}",
+     "number": 14
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where the upper approximation collects every cell that contains at least one member of X, and is therefore the part of the sample that could belong to X on this evidence."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{BN}_B(X) = \\overline{B}(X) \\setminus \\underline{B}(X)",
+     "number": 15
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where the boundary region is the difference between the two approximations. It holds precisely the specimens that the attributes cannot separate, and its size is what a referral outcome makes visible instead of absorbing it into an error rate."
+    },
+    {
+     "type": "eq",
+     "latex": "\\alpha_B(X) = \\frac{|\\underline{B}(X)|}{|\\overline{B}(X)|}",
+     "number": 16
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where alpha is the accuracy of approximation for one polymer. It equals one when that polymer has no boundary region at all, which is the strongest statement the evidence can support for a class."
+    },
+    {
+     "type": "eq",
+     "latex": "\\gamma_B(\\Pi) = \\frac{\\sum_{X \\in \\Pi} |\\underline{B}(X)|}{|U|}",
+     "number": 17
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where Pi is the partition of the sample into polymers and gamma is the quality of approximation over the whole partition, that is the fraction of specimens placed in unambiguous cells. The referral rate reported in Section IV is one minus gamma measured on held-out specimens, which is why it is a structural property of the partition and not a threshold chosen after the results were seen."
+    },
+    {
+     "type": "eq",
+     "latex": "\\delta(s) = X \\text{ if } E(s) \\subseteq \\underline{B}(X), \\text{ else } \\delta(s) = \\text{refer}",
+     "number": 18
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where s is a test specimen, E(s) is the cell it falls into and delta is the decision. The specimen receives a polymer label when its cell lies inside a lower approximation, and is referred otherwise. This is the three-way decision in the sense of Yao [15], with the difference that the referral region here is derived from the partition rather than from a threshold on a calibrated score."
+    },
+    {
+     "type": "h2",
+     "text": "EVALUATION"
+    },
+    {
+     "type": "para",
+     "text": "Evaluation follows a protocol that was written, version-tagged and frozen before any modelling result was produced, and is released with the code. The primary task is six-class polymer identity under stratified five-fold cross-validation. The frozen protocol specifies twenty repetitions of that scheme; one repetition was completed within the available computational budget, and every figure reported below is therefore based on five folds of a single repetition. Section VI states that deviation and its consequences. Template, threshold, attribute selection and bin edges are estimated inside each training fold only. The comparison classifiers are a support vector machine with a radial basis function kernel [64], a random forest [65], partial least squares discriminant analysis [66] and a one-dimensional convolutional network of the kind established for vibrational spectra [67], each tuned inside the training fold and evaluated on identical folds. The first three are the scikit-learn implementations [68]; the convolutional network is implemented in PyTorch [69]. Primary metrics are balanced accuracy [70] and the Matthews correlation coefficient [71]. The latter is a single coefficient over the whole confusion matrix that falls to zero for a classifier no better than chance, and is preferred to accuracy on multiclass problems of this kind [72]. Both carry a bootstrap over specimens of 1000 iterations. The glass box is compared against the strongest baseline by a paired t-test across the five folds. The corrected resampled test of Nadeau and Bengio [73] specified by the protocol is normally described for repeated resampling. Its content, however, is a variance correction for overlapping training sets, and that correction applies to a single stratified five-fold run as well. The factor one over k becomes one over k plus the ratio of test to training set size, which here inflates the variance by 2.25 and divides the statistic by 1.5. Both forms are computed; the corrected one is quoted. The archive does not document whether the 500 specimens per polymer are distinct physical items, so one check was run before the protocol was frozen. For every polymer, the mean correlation between spectra adjacent in file order equals the mean correlation between randomly drawn pairs of the same polymer. That is evidence against acquisition-block structure, but not proof of specimen independence. Section VI treats this as a limitation."
+    },
+    {
+     "type": "para",
+     "text": "The reported metrics are (19) and (20), and the separation of two polymers along one attribute is quantified by the overlapping coefficient (21).",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{BA} = \\frac{1}{K} \\sum_{k=1}^{K} \\frac{TP_k}{TP_k + FN_k}",
+     "number": 19
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where K is the number of polymers and TP_k and FN_k are true positives and false negatives for polymer k. Balanced accuracy is the mean per-class recall, which is reported instead of plain accuracy because it is insensitive to class imbalance [70]."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{MCC} = \\frac{c \\cdot n - \\sum_k p_k t_k}{\\sqrt{\\left(n^2 - \\sum_k p_k^2\\right)\\left(n^2 - \\sum_k t_k^2\\right)}}",
+     "number": 20
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where c is the number of correctly classified specimens, n is the total, p_k is the number predicted as polymer k and t_k the number truly of polymer k. The Matthews correlation coefficient is reported alongside balanced accuracy because it remains informative when a classifier is strong on some classes and weak on others [71], [72]."
+    },
+    {
+     "type": "eq",
+     "latex": "\\text{OVL}(f_j; X_1, X_2) = \\int \\min\\{\\hat{p}_1(u), \\hat{p}_2(u)\\} \\, du",
+     "number": 21
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where p-hat_1 and p-hat_2 are Gaussian kernel density estimates of attribute f_j within polymers X_1 and X_2, with Silverman bandwidth on a 512-point grid. The overlapping coefficient is zero for perfectly separated distributions and one for identical ones, so it measures how far a single named attribute separates two materials before any rule is built on it."
+    },
+    {
+     "type": "h2",
+     "text": "FROM A REFERRAL RATE TO A SAMPLING PLAN"
+    },
+    {
+     "type": "para",
+     "text": "A per-specimen decision becomes a commercial decision through an acceptance sampling plan, whose operating characteristic is (22). An imperfect inspector does not change the plan; it changes the defective fraction the plan actually sees, as in (23) [54].",
+     "indent": true
+    },
+    {
+     "type": "eq",
+     "latex": "P_a(p) = \\sum_{d=0}^{c} \\binom{n}{d} p^{d} (1-p)^{n-d}",
+     "number": 22
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where p is the true fraction of non-conforming specimens in a lot, n is the sample size, c is the largest number of defectives for which the lot is still accepted and P_a is the probability of accepting a lot of quality p. Producer risk is one minus P_a at an acceptable quality level and consumer risk is P_a at a rejectable one [54]."
+    },
+    {
+     "type": "eq",
+     "latex": "p_{\\text{eff}} = p \\cdot \\text{Se} + (1 - p)(1 - \\text{Sp})",
+     "number": 23
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "where Se is the sensitivity of the inspection, that is the probability that a non-conforming specimen is detected; Sp is its specificity; and p_eff is the defective fraction the sampling plan responds to once inspection error is included. The operating characteristic can therefore be reused without modification: only its argument changes."
+    },
+    {
+     "type": "figure",
+     "file": "matys2.png",
+     "number": 2,
+     "caption": "Entry condition on the primary dataset. The ratio of between-specimen spread to the noise-calibrated detection threshold, by polymer, on a logarithmic scale.",
+     "width": 3.4
+    }
+   ]
+  },
+  {
+   "heading": "RESULTS",
+   "blocks": [
+    {
+     "type": "figure",
+     "file": "matys3.png",
+     "number": 3,
+     "caption": "Balanced accuracy under five-fold cross-validation. Bars show the mean over folds and whiskers the 95% interval across folds. The glass box is shown twice: forced to decide every specimen, and on the specimens it accepts.",
+     "width": 3.4
+    },
+    {
+     "type": "table",
+     "number": "II",
+     "caption": "Balanced accuracy on the primary dataset, five-fold cross-validation.",
+     "header": [
+      "Method",
+      "Balanced accuracy",
+      "95% interval across folds",
+      "Coverage"
+     ],
+     "rows": [
+      [
+       "Glass box, forced choice",
+       0.948,
+       "0.9380 to 0.9565",
+       "1.000"
+      ],
+      [
+       "Glass box, accepted specimens",
+       0.9973,
+       "0.9902 to 0.9993",
+       "0.753"
+      ],
+      [
+       "SVM, radial basis function",
+       0.9997,
+       "0.9947 to 1.0000",
+       "1.000"
+      ],
+      [
+       "Random forest",
+       0.9983,
+       "0.9924 to 0.9996",
+       "1.000"
+      ],
+      [
+       "PLS-DA",
+       0.9993,
+       "0.9964 to 0.9999",
+       "1.000"
+      ],
+      [
+       "1-D convolutional network",
+       0.998,
+       "0.9814 to 0.9998",
+       "1.000"
+      ]
+     ],
+     "note": "Differences against the glass box in forced choice, with the Nadeau-Bengio correction for overlapping training folds. SVM, radial basis function: 0.0517 (0.0389 to 0.0645), t = 11.21, p = 0.00036. PLS-DA: 0.0513 (0.0379 to 0.0648), t = 10.62, p = 0.00045. Random forest: 0.0503 (0.0376 to 0.0630), t = 11.02, p = 0.00039. 1-D convolutional network: 0.0500 (0.0390 to 0.0610), t = 12.65, p = 0.00022."
+    },
+    {
+     "type": "h2",
+     "text": "ACCURACY PARITY AND THE PRICE OF AUDITABILITY"
+    },
+    {
+     "type": "para",
+     "text": "Table 2 and Fig. 3 report the primary comparison. Forced to decide every specimen, the glass box reaches a balanced accuracy of 0.9480 with a 95% interval across folds of 0.9388 to 0.9572 and a Matthews correlation coefficient of 0.9377. The strongest baseline, the support vector machine, reaches 0.9997, with partial least squares discriminant analysis at 0.9993, the random forest at 0.9983 and the convolutional network at 0.9980. The difference of 0.0517 against the strongest baseline is significant. Under the corrected resampled test of Nadeau and Bengio [73], which the protocol specifies, t is 11.21 and p is 0.00036, with a 95% interval on the difference of 0.0389 to 0.0645. The uncorrected paired t-test across the same five folds gives t equal to 16.81 and p equal to 0.00007; the corrected form is the one quoted throughout, because it accounts for the overlap between training folds. Section VI states the remaining consequence of the single repetition, which is that this interval is narrower than repeated cross-validation would give. On a six-class problem the majority-class reference is 0.1667, so every method is far above chance and the comparison is between near-ceiling alternatives."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Permitted to refer, the same rule reaches 0.9973 balanced accuracy and 0.9968 Matthews correlation on the 75.3% of specimens it accepts. The word parity in the title is used in a specific and testable sense, so it is worth stating what was and was not shown. The mean shortfall of the accepted-specimen figure against the strongest baseline evaluated on all specimens is 0.0024 balanced accuracy, and a one-sided test with the same variance correction rejects a shortfall of one percentage point or more with p equal to 0.00435. The same holds against each of the other three baselines. Parity therefore means non-inferiority at a one-point margin, established by a test, and not statistical equivalence, which was not tested. The two modes are also measured on different specimen sets, since the accepted-specimen figure is evaluated only on what the rule accepts, so this comparison favours the rule by construction and should be read together with the referral rate rather than instead of it. The shortfall of the forced-choice mode is not removed by referral; it is relocated into a quantity the operator can see, price and act on, namely one specimen in four sent for a second test. A black-box classifier offers no equivalent quantity: its errors are distributed across all specimens and are invisible at the point of decision."
+    },
+    {
+     "type": "h2",
+     "text": "WHAT THE DECISION RESTS ON"
+    },
+    {
+     "type": "para",
+     "text": "The decision rests on two named attributes, and which two they are depends on the criterion used to pick them. Two criteria are in play in this article and they return different pairs, so they are separated here before any number is quoted, and are referred to below as the approximation criterion and the cross-validated criterion. The first, the approximation criterion, maximises the quality of approximation on the full sample: it selects the baseline offsets of the carbon-hydrogen stretching and carbonyl windows, O_W1 and O_W2, partitioning the specimens into 1183 cells and placing 90.4% of them inside a lower approximation. That share is the quality of approximation, written as the proportion 0.9037 wherever it is used as an index. That pair is what the rough-set quantities in this subsection describe. The second, the cross-validated criterion, is the one the classifier evaluated in Table 2 actually uses, inner cross-validated balanced accuracy on the training fold. It chooses the amplitude of the carbonyl window together with the shape correlation of the deformation window, and that is the pair reported in every fold of the cross-validation and in 19 of the 20 refits of Section IV-C. Maximising the quality of approximation maximises how much of the training sample falls in unambiguous cells, while the classifier's criterion maximises held-out accuracy, and on this dataset the two do not coincide. Per class the accuracy of approximation is 1.000 for polyethylene terephthalate, which has an empty boundary region, 0.9492 for polystyrene, 0.9017 for poly(vinyl chloride), 0.8462 for polypropylene, 0.6789 for low-density polyethylene and 0.6295 for high-density polyethylene, with boundary regions of 0, 26, 51, 84, 184 and 239 specimens respectively. The pattern is chemically sensible rather than arbitrary: the two polyethylenes differ in branching rather than in functional groups, so they are the pair the chosen attributes separate least well, and they account for most of the referrals."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Of the 144 mined rules, 98 remain significant after false-discovery-rate control. The median confidence that an attribute moves beyond its threshold when the polymer changes is 0.966, and 13 rules reach a confidence of exactly 1.000 while a further two round to it. Table 4 and Fig. 4 give the full rule matrix. Attributes rank by mean confidence across polymer pairs. The offset of the carbon-hydrogen window is the most responsive at 0.9880, with a minimum of 0.9270 over all pairs, followed by the offset of the deformation window at 0.9707 and the amplitude of the carbon-hydrogen window at 0.9600; the least responsive is the correlation of the carbonyl window at 0.8471. Fig. 5 reports the same question distributionally. Distributional separation tells a complementary story: the median overlap coefficient across the 135 combinations of nine attributes and fifteen polymer pairs is 0.3550, and 23 of them fall below 0.05, that is, are almost perfectly separated. The single most separating attribute by median overlap is the shape correlation of the deformation window at 0.0493. The released matrix also contains six one-against-the-rest comparisons, 54 further rows; they are excluded from every summary quoted here, because they are not polymer pairs."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The rule confidences reported in the previous paragraph are stable under the choices the protocol left open; Table 5 and Fig. 9 give the full sweep. Changing the pair cap from 500 to 2000 to 5000 moves the headline confidence of the amplitude attribute from 0.9600 to 0.9596 to 0.9605. Changing k from 3 to 4 to 5 moves it from 0.9698 to 0.9596 to 0.9508, that is, monotonically and by less than two percentage points over a factor of 1.67 in threshold width. Re-running the analysis at 4 cm⁻¹ instead of 8 cm⁻¹ gives 0.9758 against 0.9596, so finer resolution slightly increases the measured responsiveness without changing any conclusion."
+    },
+    {
+     "type": "h2",
+     "text": "STABILITY OF WHAT THE MODEL POINTS AT"
+    },
+    {
+     "type": "para",
+     "text": "The practical claim behind interpretability by design is that the quantities a model uses do not move when the model is refitted. This was tested directly. Table 7 and Fig. 7 record what happens over repeated fits. Over twenty fits on independently drawn 70% training samples the classifier was refitted end to end, including its attribute selection, exactly as in the cross-validation. The selected pair was the amplitude of the carbonyl window with the shape correlation of the deformation window in 19 of the 20 fits, and a different pair once, so two distinct sets occurred. The pair selected most often is the same one chosen inside every fold of the cross-validation, which is the consistency the claim requires. A second, weaker selection criterion was recorded alongside: maximising the quality of approximation on the training sample alone returns the two baseline offsets in all twenty fits. Each criterion is therefore stable in itself, but they do not agree with each other, and that disagreement is the honest measure of how much the representation depends on the rule used to choose it. Over the same twenty fits, the ranking of the same nine attributes produced by exact tree-based Shapley attribution [74] of a random forest had a mean Kendall rank correlation [75] between repeats of 0.8816 with a minimum of 0.6667, so the ranking as a whole is stable. The instability is concentrated where it matters for a written specification: the set of three highest-ranked attributes took two distinct values and its modal value occurred in 90% of repeats. Both representations live in the same nine-attribute space, so this is not an artefact of contrasting nine named quantities with 1869 raw channels. It is, however, a comparison between a set of two and a set of three, and set size affects every measure of set stability, so the comparison was repeated at matched size. At size two the attribution is the more stable of the two: its top pair is the same in all twenty fits, mean pairwise Jaccard 1.0000, against 19 of 20 and 0.9333 for the rule's own selection. The claim that a glass box points at more stable quantities than a post-hoc method is therefore not supported on this dataset, and is withdrawn. What survives is a different and narrower statement: the two quantities the rule selects are the decision, so their stability is the stability of the artefact a specification would cite, whereas the attribution's top pair ranks the inputs of a model whose verdict still depends on all nine. Stability of a ranking and stability of a rule are not the same property, and only the second can be written into a contract. Table 7 reports both set sizes."
+    },
+    {
+     "type": "h2",
+     "text": "DATA EFFICIENCY: THE HYPOTHESIS IS NOT SUPPORTED"
+    },
+    {
+     "type": "para",
+     "text": "A frequent argument for models built on a small number of physically meaningful quantities is that they should need less training data than models that must learn a representation. That argument was tested and it fails on this dataset. Table 6 and Fig. 6 answer the protocol's fourth question. Across training subsets from 1 to 100% of the specimens, with three repetitions of five-fold cross-validation at each size, the glass box is behind the strongest baseline at every size. The support vector machine, random forest and partial least squares model were run at all eight sizes; the convolutional network only at 75% and 100%, which is a departure from the protocol recorded in Section VI. It does not affect the comparison, because the support vector machine is the strongest baseline at every size where both were run. The shortfall in balanced accuracy is 0.148 at 1% of the specimens, which is 4 per class, then 0.159 at 2%, 0.139 at 5%, 0.104 at 10%, 0.084 at 25%, 0.067 at 50%, 0.058 at 75% and 0.053 at 100%, which is 400 per class. The 95% interval of the difference excludes zero in favour of the baseline at every size, so there is no crossover. The trend is also the opposite of the hypothesis over most of the range. The gap widens slightly between 1 and 2%, where both the rule and the baselines are still far from their ceiling, then narrows steadily from 2 to 100%. The steps shrink as it narrows: the last two increments, from 50 to 75% and from 75 to 100%, close the gap by 0.010 and 0.005. Extrapolating that decelerating trend would have the two meeting far beyond any sample size this task will encounter, so on this evidence the constraint on the rule is not sample size but the expressive capacity of a two-attribute partition. Reporting this matters, because the data-efficiency claim is often asserted for interpretable models without being measured."
+    },
+    {
+     "type": "h2",
+     "text": "FROM REFERRAL RATE TO ACCEPTANCE RISK"
+    },
+    {
+     "type": "para",
+     "text": "A per-specimen decision becomes a commercial decision through a sampling plan, and an imperfect test changes the plan's risk profile. What follows is a scenario analysis and not a measurement of any real inspection regime: it maps the classifier's measured error onto four standard single-stage plans under the assumptions stated in (22) and (23), namely a binary conforming or non-conforming event, independent draws within a lot, and inspection error that does not depend on which polymer was declared. Fig. 10 shows the resulting curves and Table 8 the risks at two defective fractions. The inspector here is the glass box in forced-choice mode, so its own measured quantities are used: a mean per-class sensitivity of 0.9480 and a mean per-class specificity of 0.9896. Table 8 contrasts a perfect inspector with that one. Two limits of this calculation should be stated before its numbers are read. The plan treats inspection as binary, conforming or not, whereas the classifier is six-class, so the per-class figures are being used as a proxy for a binary verdict. And the referral outcome has no place in a single-stage plan: a referred specimen is neither accepted nor rejected, so the calculation below describes an inspector operating in forced-choice mode, which is the conservative case. For a plan with a sample of 50 and zero acceptable defectives, the producer risk at a one percent defective fraction rises from 0.3950 to 0.6316; for a sample of 80 accepting one defective it rises from 0.1908 to 0.4712, and for 125 accepting two from 0.1307 to 0.4502. Consumer risk at a ten percent defective fraction stays negligible throughout, falling from 0.0052 to 0.0041 for the first plan. The asymmetry is the practically important finding: an imperfect classifier used inside a conventional sampling plan hurts the supplier of good material far more than it protects the buyer, because false rejections accumulate on lots that are in fact conforming. A referral outcome, which routes the ambiguous specimen to a second test instead of rejecting it, is the direct remedy, and its cost is the referral rate measured above."
+    },
+    {
+     "type": "h2",
+     "text": "THE PRICE OF A FINER GRID"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "The referral rate is not a single number imposed by the method; it is the consequence of which attribute set is used, and the two panels of Fig. 8 show the trade-off directly. The ten strongest two-attribute sets span a quality of approximation from 0.9037 down to 0.7283, which is to say that the weakest of them refers almost three specimens in ten where the strongest refers fewer than one. The ordering is informative in itself: every one of the ten best sets contains at least one baseline offset, and the two best contain the offset of the carbon-hydrogen stretching window. The second panel plots the referral rate against the number of cells the set induces and shows why a finer grid does not improve certainty without cost. A grid with more cells makes each cell purer, but it also places more specimens in cells that the training sample never populated, and those specimens are referred. The method therefore has a tunable parameter whose cost is quantified, and the frozen protocol fixed its position before any of these numbers were seen."
+    },
+    {
+     "type": "h2",
+     "text": "SENSITIVITY TO THE CHOICES THE PROTOCOL LEFT OPEN"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "Three decisions in the protocol were deliberately left variable because no principled value exists for them: the cap on the pair database, the multiplier that converts noise into a detection threshold, and which of the two spectral resolutions is used. Fig. 9 shows the headline rule confidence under all of them. Across every setting the largest spread observed for any attribute is 0.1508, and for the attributes that carry the decision the curves are visually flat. This matters for a reviewer because a result that moved substantially with the pair cap would indicate that the rule responds to the sampling procedure, not to the material, and a result that moved with k would indicate that the threshold was doing the classification. Neither is the case. The sensitivity analysis is reported here, not in supplementary material because it is the evidence that the single configuration named in the protocol is not an artefact of a favourable configuration."
+    },
+    {
+     "type": "table",
+     "number": "III",
+     "caption": "Rough-set approximation by polymer for the selected attribute set.",
+     "header": [
+      "Polymer",
+      "Accuracy of approximation",
+      "Boundary region (specimens)"
+     ],
+     "rows": [
+      [
+       "HDPE",
+       0.6295,
+       239
+      ],
+      [
+       "LDPE",
+       0.6789,
+       184
+      ],
+      [
+       "PET",
+       1.0,
+       0
+      ],
+      [
+       "PP",
+       0.8462,
+       84
+      ],
+      [
+       "PS",
+       0.9492,
+       26
+      ],
+      [
+       "PVC",
+       0.9017,
+       51
+      ]
+     ],
+     "note": "Attribute set O_W1 and O_W2; quality of approximation 0.9037 over 1183 cells."
+    },
+    {
+     "type": "figure",
+     "file": "matys4.png",
+     "number": 4,
+     "caption": "Confidence that each named attribute moves beyond its own detection threshold when the polymer changes, for every pair of polymers.",
+     "width": 7.0
+    },
+    {
+     "type": "table",
+     "number": "IV",
+     "caption": "Rule confidence by attribute, aggregated over polymer pairs.",
+     "header": [
+      "Attribute",
+      "Mean confidence",
+      "Worst polymer pair",
+      "Significant at q < 0.05"
+     ],
+     "rows": [
+      [
+       "O_W1",
+       0.988,
+       0.927,
+       "11 of 16"
+      ],
+      [
+       "O_W3",
+       0.9707,
+       0.953,
+       "4 of 16"
+      ],
+      [
+       "A_W1",
+       0.96,
+       0.745,
+       "14 of 16"
+      ],
+      [
+       "C_W3",
+       0.9591,
+       0.6385,
+       "14 of 16"
+      ],
+      [
+       "A_W3",
+       0.9533,
+       0.904,
+       "5 of 16"
+      ],
+      [
+       "O_W2",
+       0.9456,
+       0.8705,
+       "9 of 16"
+      ],
+      [
+       "A_W2",
+       0.8841,
+       0.6955,
+       "12 of 16"
+      ],
+      [
+       "C_W1",
+       0.8614,
+       0.287,
+       "16 of 16"
+      ],
+      [
+       "C_W2",
+       0.8471,
+       0.3885,
+       "13 of 16"
+      ]
+     ]
+    },
+    {
+     "type": "figure",
+     "file": "matys5.png",
+     "number": 5,
+     "caption": "Median overlap coefficient between polymer pairs, by attribute. Lower is better separated.",
+     "width": 3.4
+    },
+    {
+     "type": "table",
+     "number": "V",
+     "caption": "Sensitivity of the headline rule confidence to the protocol's open choices.",
+     "header": [
+      "Varied",
+      "Setting",
+      "Confidence, amplitude of C-H window"
+     ],
+     "rows": [
+      [
+       "pair_cap",
+       "500",
+       0.96
+      ],
+      [
+       "pair_cap",
+       "2000",
+       0.9596
+      ],
+      [
+       "pair_cap",
+       "5000",
+       0.9605
+      ],
+      [
+       "k",
+       "3.0",
+       0.9698
+      ],
+      [
+       "k",
+       "4.0",
+       0.9596
+      ],
+      [
+       "k",
+       "5.0",
+       0.9508
+      ],
+      [
+       "resolution",
+       "c4 (4 cm-1)",
+       0.9758
+      ],
+      [
+       "resolution",
+       "c8 (8 cm-1)",
+       0.9596
+      ]
+     ]
+    },
+    {
+     "type": "figure",
+     "file": "matys6.png",
+     "number": 6,
+     "caption": "Learning curves and the difference against the strongest baseline. The shaded band is the 95% bootstrap interval. No crossover occurs.",
+     "width": 7.0
+    },
+    {
+     "type": "table",
+     "number": "VI",
+     "caption": "Learning curve: glass box against the strongest baseline at each training size.",
+     "header": [
+      "Training set (%)",
+      "Specimens per class",
+      "Strongest baseline",
+      "Glass box minus baseline",
+      "95% interval"
+     ],
+     "rows": [
+      [
+       1.0,
+       4,
+       "plsda",
+       -0.148,
+       "-0.1578 to -0.1378"
+      ],
+      [
+       2.0,
+       8,
+       "plsda",
+       -0.1588,
+       "-0.1676 to -0.1499"
+      ],
+      [
+       5.0,
+       20,
+       "plsda",
+       -0.1388,
+       "-0.1474 to -0.1309"
+      ],
+      [
+       10.0,
+       40,
+       "plsda",
+       -0.1043,
+       "-0.1122 to -0.0963"
+      ],
+      [
+       25.0,
+       100,
+       "svm_rbf",
+       -0.0835,
+       "-0.0906 to -0.0764"
+      ],
+      [
+       50.0,
+       200,
+       "svm_rbf",
+       -0.0674,
+       "-0.0743 to -0.0606"
+      ],
+      [
+       75.0,
+       300,
+       "svm_rbf",
+       -0.0579,
+       "-0.0643 to -0.0514"
+      ],
+      [
+       100.0,
+       400,
+       "svm_rbf",
+       -0.053,
+       "-0.0597 to -0.0466"
+      ]
+     ]
+    },
+    {
+     "type": "figure",
+     "file": "matys7.png",
+     "number": 7,
+     "caption": "Stability across twenty repeated fits. (a) ranks assigned by post-hoc attribution; (b) the attribute set selected by the rule.",
+     "width": 7.0
+    },
+    {
+     "type": "table",
+     "number": "VII",
+     "caption": "Stability of the selected attribute set across twenty repeated fits, compared at matched set size.",
+     "header": [
+      "Selector and set size",
+      "Repeated fits",
+      "Most frequent set",
+      "Share of repeats with it",
+      "Distinct sets",
+      "Mean pairwise Jaccard"
+     ],
+     "rows": [
+      [
+       "glass box, selected attributes, 2 attributes",
+       20,
+       "A_W2, C_W3",
+       "0.95",
+       2,
+       "0.9333"
+      ],
+      [
+       "post-hoc attribution, 2 attributes",
+       20,
+       "A_W1, C_W3",
+       "1.00",
+       1,
+       "1.0000"
+      ],
+      [
+       "post-hoc attribution, 3 attributes",
+       20,
+       "A_W1, C_W1, C_W3",
+       "0.90",
+       2,
+       "0.9053"
+      ]
+     ],
+     "note": "Rank correlation of the full attribution ordering over the same twenty fits: mean Kendall tau 0.8816, minimum 0.6667. At matched size of two the attribution is the more stable selector; the rule's advantage is not stability but that the selected pair is itself the decision."
+    },
+    {
+     "type": "figure",
+     "file": "matys10.png",
+     "number": 8,
+     "caption": "Decidability by attribute set. (a) quality of approximation for the ten strongest two-attribute sets; (b) referral rate against the number of cells the set induces, showing that a finer grid buys certainty per cell at the cost of referring more specimens.",
+     "width": 6.9
+    },
+    {
+     "type": "figure",
+     "file": "matys11.png",
+     "number": 9,
+     "caption": "Headline rule confidence under every choice the frozen protocol left open: the pair sampling cap, the threshold multiplier and the spectral resolution. The fourth open choice, the binning rule, moves the result far more than these three and is reported separately in Table 11 and in Section IV-H.",
+     "width": 6.9
+    },
+    {
+     "type": "figure",
+     "file": "matys8.png",
+     "number": 10,
+     "caption": "Operating-characteristic curves for four single-stage sampling plans under a perfect inspector and under the observed one. Dotted lines mark the one and ten percent defective fractions.",
+     "width": 7.0
+    },
+    {
+     "type": "table",
+     "number": "VIII",
+     "caption": "Producer and consumer risk for four single-stage sampling plans.",
+     "header": [
+      "Sampling plan",
+      "Inspector",
+      "Producer risk at 1% defective",
+      "Consumer risk at 10% defective"
+     ],
+     "rows": [
+      [
+       "n = 50, c = 0",
+       "perfect inspector",
+       0.395,
+       0.0052
+      ],
+      [
+       "n = 50, c = 0",
+       "observed inspector",
+       0.6316,
+       0.0041
+      ],
+      [
+       "n = 80, c = 1",
+       "perfect inspector",
+       0.1908,
+       0.0022
+      ],
+      [
+       "n = 80, c = 1",
+       "observed inspector",
+       0.4712,
+       0.0016
+      ],
+      [
+       "n = 125, c = 2",
+       "perfect inspector",
+       0.1307,
+       0.0002
+      ],
+      [
+       "n = 125, c = 2",
+       "observed inspector",
+       0.4502,
+       0.0001
+      ],
+      [
+       "n = 200, c = 3",
+       "perfect inspector",
+       0.142,
+       0.0
+      ],
+      [
+       "n = 200, c = 3",
+       "observed inspector",
+       0.5596,
+       0.0
+      ]
+     ]
+    },
+    {
+     "type": "h2",
+     "text": "WHAT THE REFERRAL BUYS AND WHAT IT COSTS"
+    },
+    {
+     "type": "para",
+     "text": "A classifier that may abstain is not comparable with one that may not, so the comparison in Table 2 is deliberately conservative towards the rule: the baselines are evaluated on every specimen. Two sharper comparisons are available and both are reported here, because a reader will otherwise ask for them. Restricted to exactly the specimens the rule accepts, the baselines do not get worse, they get better: the radial-basis support vector machine is perfect on that subset, and the other three exceed their own all-specimen figures. The same holds when each baseline is given a reject option of its own. Abstaining on the specimens where the margin between its two highest-scoring classes is smallest, until it reaches the same coverage, every margin-based baseline is also perfect. The rule reaches 0.9973 under the same budget. The conclusion this forces bounds what the article claims, so it is worth stating plainly. Referral does not make the rule more accurate than a black box, and a black box with a confidence threshold attains a slightly higher selective accuracy. What the rule provides that they do not is that both halves of its output, the verdict and the refusal, are expressed in the same named physical quantities, so each can be written into a specification and contested. The measured cost of that property at matched coverage is 0.0027 balanced accuracy."
+    },
+    {
+     "type": "table",
+     "number": "IX",
+     "caption": "Every classifier evaluated under the same referral budget.",
+     "header": [
+      "Classifier",
+      "Regime",
+      "Balanced accuracy",
+      "MCC"
+     ],
+     "rows": [
+      [
+       "Glass box",
+       "evaluated on the specimens the rule accepts",
+       0.9973,
+       0.9968
+      ],
+      [
+       "SVM, radial basis function",
+       "evaluated on the specimens the rule accepts",
+       1.0,
+       1.0
+      ],
+      [
+       "Random forest",
+       "evaluated on the specimens the rule accepts",
+       0.9987,
+       0.9984
+      ],
+      [
+       "PLS-DA",
+       "evaluated on the specimens the rule accepts",
+       0.9991,
+       0.9989
+      ],
+      [
+       "1-D convolutional network",
+       "evaluated on the specimens the rule accepts",
+       0.9993,
+       0.9989
+      ],
+      [
+       "SVM, radial basis function",
+       "own reject option, same coverage",
+       1.0,
+       1.0
+      ],
+      [
+       "Random forest",
+       "own reject option, same coverage",
+       1.0,
+       1.0
+      ],
+      [
+       "PLS-DA",
+       "own reject option, same coverage",
+       1.0,
+       1.0
+      ],
+      [
+       "Glass box",
+       "own reject option, same coverage",
+       0.9973,
+       0.9968
+      ]
+     ],
+     "note": "Coverage is 75.3% in every row. A baseline abstains on the specimens where the margin between its two highest-scoring classes is smallest, until it reaches that coverage."
+    },
+    {
+     "type": "para",
+     "text": "The referral is also far from uniform across polymers, and the pattern is the one a spectroscopist would predict. Low-density polyethylene is accepted in only 33.8% of cases and high-density polyethylene in 71.4%, while poly(ethylene terephthalate) and poly(vinyl chloride) are accepted in more than 94%. The two polyolefins differ mainly in branching, which shifts band intensities without introducing a band, so the attributes that separate the other classes leave them in a shared cell. The rule therefore concentrates its refusals where the evidence is weakest, which is the behaviour a referral mechanism should have. It also means that a single referral rate conceals a range from 4.8% to 66.2%, depending on the material. Among accepted specimens recall is 0.9916 or better for every class."
+    },
+    {
+     "type": "table",
+     "number": "X",
+     "caption": "Candidate attribute pairs evaluated out of fold.",
+     "header": [
+      "Attribute pair",
+      "Coverage, out of fold",
+      "Accepted specimens",
+      "Forced choice",
+      "Quality of approximation, training"
+     ],
+     "rows": [
+      [
+       "A_W2+C_W3",
+       0.753,
+       0.9973,
+       0.948,
+       0.7735
+      ],
+      [
+       "C_W3+O_W2",
+       0.6947,
+       0.9923,
+       0.9323,
+       0.7829
+      ],
+      [
+       "O_W1+O_W3",
+       0.673,
+       0.9725,
+       0.91,
+       0.8629
+      ],
+      [
+       "A_W1+A_W3",
+       0.6,
+       0.97,
+       0.873,
+       0.6693
+      ],
+      [
+       "O_W1+O_W2",
+       0.7137,
+       0.9668,
+       0.929,
+       0.9153
+      ],
+      [
+       "O_W1+A_W3",
+       0.731,
+       0.9656,
+       0.9097,
+       0.8962
+      ]
+     ],
+     "note": "The pair the classifier selects by inner cross-validation is first on every out-of-fold measure, while the pair that maximises the training quality of approximation is fifth."
+    },
+    {
+     "type": "para",
+     "text": "The two selection criteria named in Section IV-B can now be separated on evidence. Table 10 evaluates six candidate pairs under the folds of the main experiment. The pair chosen by inner cross-validation is first on coverage, on accuracy over accepted specimens and on forced-choice accuracy. The pair that maximises the quality of approximation on the training sample ranks fifth of six on accuracy over accepted specimens and third of six on the other two measures, despite having the highest training-set value of that quantity, 0.9153 against 0.7735. Maximising the quality of approximation therefore overfits the training partition, and the disagreement between the criteria is resolved in favour of the cross-validated one. The same applies to the binning rule. Table 11 reports the binning rule out of fold. Ten equal-width bins do not destroy accuracy, they destroy coverage. Accuracy over accepted specimens rises to 1.0000, while coverage falls from 75.3% to 30.4% and forced-choice accuracy from 0.9480 to 0.7327. The binning rule is thus a dial on the referral rate, and the noise-derived setting is the one that keeps three quarters of the specimens decidable."
+    },
+    {
+     "type": "table",
+     "number": "XI",
+     "caption": "The binning rule, measured out of fold.",
+     "header": [
+      "Binning rule",
+      "Attribute pair",
+      "Coverage, out of fold",
+      "Accepted specimens",
+      "Forced choice"
+     ],
+     "rows": [
+      [
+       "sens.min width",
+       "A_W2+C_W3",
+       0.753,
+       0.9973,
+       0.948
+      ],
+      [
+       "sens.min width",
+       "O_W1+O_W2",
+       0.7137,
+       0.9668,
+       0.929
+      ],
+      [
+       "10 equal width",
+       "A_W2+C_W3",
+       0.3043,
+       1.0,
+       0.7327
+      ],
+      [
+       "10 equal width",
+       "O_W1+O_W2",
+       0.1693,
+       1.0,
+       0.6907
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "heading": "DISCUSSION",
+   "blocks": [
+    {
+     "type": "h2",
+     "text": "WHAT THE REFERRAL RATE BUYS"
+    },
+    {
+     "type": "para",
+     "text": "On this dataset every method performs close to the ceiling, and the forced-choice gap of 0.052 balanced accuracy is real but small in absolute terms. The argument for the glass box therefore cannot rest on accuracy, and this article does not make it rest there. It rests on three properties that the aggregate accuracy of a black box does not provide. First, traceability of the individual decision. Second, advance identification of the cases where the evidence is insufficient. Third, stability of the quantities the model uses. The decision for an individual specimen is traceable to the value of two named spectral quantities and to the cell of a grid whose width is the instrument's own detection threshold. The cases where the evidence is insufficient are identified before the decision is taken, not discovered afterwards through a misclassification. And the quantities the model uses are the same on 19 of 20 refits, so a decision rule written into a specification today will usually mean the same thing when the model is retrained next year. One boundary of this argument has to be drawn explicitly, because Table 9 draws it anyway. Giving each baseline its own reject option at the same coverage makes all three margin-based baselines perfect on the specimens they keep, above the rule's 0.9973. Selective accuracy is therefore not where the advantage lies, and any claim that it is would be refuted by a reviewer in one afternoon. The advantage is that the rule's refusal is itself legible. A black box abstains when a scalar confidence falls below a threshold that corresponds to nothing in the material. This rule abstains when two named spectral quantities place a specimen in a cell the training data did not resolve, and that cell can be named in a specification, audited, and argued about with a supplier. The measured price of that legibility, at equal coverage, is 0.0027 balanced accuracy."
+    },
+    {
+     "type": "h2",
+     "text": "REPRODUCTION MATERIAL AND INTERACTIVE SUPPORTING SITE"
+    },
+    {
+     "type": "para",
+     "indent": false,
+     "text": "Everything behind the numbers reported above is released, and in two forms that serve different readers. The repository [76] holds the analysis code, the frozen protocol with its version tag, every derived result table and every figure script, so that a reader who wants to check a number can run the script that produced it and compare the output file. The two source collections are not redistributed; they are addressed by record identifier and fetched by a download script, so the rebuild is version-pinned rather than dependent on a copy whose provenance would have to be trusted."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The second form is an interactive site [77] that reads exactly the same result tables. It is intended for the reader who wants to interrogate a claim rather than accept a static figure. Ten views are provided. A spectrum explorer shows the mean spectrum of a selected polymer with the three analysis windows shaded and the nine attributes computed for it, which makes concrete what an amplitude, a shape correlation and an offset are on a real measurement. A decidability view reports the accuracy of approximation per polymer for any of the twelve best attribute sets, so a reader can see how the boundary region grows as a weaker attribute pair is chosen. A rule matrix shows every mined rule as a heat map of confidence over attributes and polymer pairs, with the Wilson interval and the adjusted significance on hover. A separation view draws the two kernel density estimates whose shared area is the overlapping coefficient of (21), which turns that number back into the picture it summarises. Further views cover accuracy parity, the learning curves, attribution stability across repeated fits, and an acceptance-sampling panel in which the sample size, the acceptance number and the inspector sensitivity can be varied and the operating characteristic of (22) is redrawn with the producer and consumer risks recomputed."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Four properties of the site are deliberate. First, each chart offers the data behind it as a file and itself as a print-resolution image, so a reviewer does not have to take a plotted value on trust. Second, the address bar carries the current view and its settings, so a specific chart under specific settings can be cited directly. Third, the site carries no external dependency: the charting layer is written for the purpose and ships with the repository, so the material still works from a downloaded archival copy years after any content delivery network has changed. Fourth, selecting a polymer in one view filters the others, which is how the referral behaviour of a single material can be followed from its spectrum through its rules to its effect on acceptance risk."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The third of the properties claimed in Section V-A, the stability of the quantities the model uses, deserves separate treatment, because it is measurable and because the measurement is more nuanced than the usual appeal to explanation instability. Across twenty repeated fits the selected attribute pair was the same in 19 of 20. The post-hoc attribution ranking over the same nine quantities was itself reasonably stable, with a mean Kendall rank correlation between repeats of 0.8816 and a worst pair of 0.6667, and at matched size of two it was stable in all twenty, which is better than the rule's own selection. The claim that interpretability by design buys a more stable representation therefore fails on this dataset and is not made. What does change is the part a specification would reference: the set of three most important attributes differed in 10% of repeats and took two distinct values. A tolerance written against the top three attributes would therefore have had to be reissued once in ten refits, whereas one written against the attribute pair the rule selects would not have had to be reissued at all. This is a weaker but better-grounded version of the instability results of Alvarez-Melis and Jaakkola [11] and Ghorbani, Abid and Zou [12], observed on a routine industrial measurement rather than on image benchmarks."
+    },
+    {
+     "type": "h2",
+     "text": "WHY THE BOUNDARY REGION FALLS WHERE IT DOES"
+    },
+    {
+     "type": "para",
+     "text": "The referred specimens are not distributed uniformly across the six classes, and the spread is wide enough that the headline referral rate should never be quoted on its own. Out of fold, 95.2% of poly(ethylene terephthalate) and 94.6% of poly(vinyl chloride) specimens are accepted, against 71.4% of high-density and 33.8% of low-density polyethylene. Poly(ethylene terephthalate) has an empty boundary region in the fitted partition, and polystyrene and poly(vinyl chloride) have small ones, whereas the two polyethylenes carry the largest. This matches the chemistry: polyethylene terephthalate carries a strong ester carbonyl absent from the polyolefins [6], whereas high-density and low-density polyethylene differ by chain branching, which changes band intensities subtly rather than adding or removing a functional group. A practitioner reading the per-class boundary sizes obtains directly usable information, namely that a second test is worth provisioning for polyolefin separation and is largely unnecessary for polyethylene terephthalate. An aggregate accuracy of 0.9997 provides none of this information."
+    },
+    {
+     "type": "h2",
+     "text": "IMPLICATIONS FOR RECYCLATE MARKETS"
+    },
+    {
+     "type": "para",
+     "text": "Section I framed recyclate quality as an information problem. The acceptance-sampling result makes the connection concrete. Under a conventional plan with a sample of 50 and zero acceptable defectives, an inspector with the classifier's own measured sensitivity of 0.9480 and specificity of 0.9896 raises the producer risk at a one percent defective fraction from 0.3950 to 0.6316, while consumer risk barely moves. The supplier of conforming material bears almost the whole cost of imperfect measurement. In a market already characterised by adverse selection this is exactly the wrong incentive, because it penalises the supplier who actually has good material. A rule that refers ambiguous specimens for a second test instead of rejecting them removes that penalty at a known price, namely the referral rate, and EN 18065:2025, which ties recyclate classification to data-quality levels, gives a natural place to declare such a rate."
+    },
+    {
+     "type": "h2",
+     "text": "TRANSFER TO RECOVERED MATERIAL"
+    },
+    {
+     "type": "para",
+     "text": "The recyclate archive was retained as a transfer case rather than as a second evaluation set, and the audit reported in Section III explains why. Its polymer labels are the output of a library-matching procedure applied to the same spectra, so a classifier trained on them learns to reproduce that procedure rather than to verify material identity, and its quality verdict is an automated threshold on match score and signal-to-noise rather than an inspection. Seventeen labelled particles cannot support the evaluation protocol used here. Reporting this is itself a contribution: several of the studies surveyed in Section II evaluate on archives of the same kind without stating how labels were produced, and an accuracy measured against library-derived labels answers a narrower question than it appears to."
+    },
+    {
+     "type": "h2",
+     "text": "RELATION TO REPORTED ACCURACIES IN THE LITERATURE"
+    },
+    {
+     "type": "para",
+     "text": "The accuracies reported here, including those of the baselines, should not be read as evidence that the task is solved. The primary collection consists of pristine specimens of six industrial polymers measured on one instrument, which is close to the easiest version of the problem. The literature surveyed in Section II reports accuracies in the same range, frequently on splits that are either random at the spectrum level or unreported, and two of the few studies that test across acquisition conditions report a loss on real-world material [27], [25]. The transferable quantity from this article is therefore not the accuracy but the referral mechanism and the detection-threshold calibration, both of which are defined independently of how easy the classification happens to be."
+    }
+   ]
+  },
+  {
+   "heading": "LIMITATIONS",
+   "blocks": [
+    {
+     "type": "para",
+     "text": "The following limitations bound the results and are stated in the order in which they would affect a replication."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "First, the evaluation completed one repetition of five-fold cross-validation rather than the twenty repetitions the frozen protocol specifies, because a single repetition required 43 minutes of computation and the available budget did not permit twenty. The reported intervals are therefore computed across the five folds of one repetition and are narrower than repeated cross-validation would give. The comparison against the strongest baseline does carry the Nadeau-Bengio variance correction, which applies to a single stratified five-fold run and not only to repeated resampling, so the interval quoted in Section IV is the conservative one. What a single repetition cannot give is the between-repetition component of variance, so the reported interval still understates the spread that twenty repetitions would reveal. The margin absorbs this comfortably: the gap of 0.052 balanced accuracy is eleven times its corrected standard error. This is a deviation from the protocol and is recorded as such in the released protocol file. Two further departures belong in the same list: the convolutional network entered the learning-curve experiment at the two largest training sizes only, and the stability experiment was repeated at matched set size only after the protocol was frozen, as a confirmatory analysis that refits nothing. Two further departures belong here. The attribute set is chosen by different criteria in different parts of the study: the validated classifier selects it by inner cross-validated balanced accuracy, whereas Table 3 reports the pair that maximises the training-set quality of approximation, and the two do not agree. Both are reported, and the disagreement is itself a finding about how much the method depends on the selection criterion. Separately, in the baseline pipelines the feature scaling is estimated on the whole training fold before the inner split used for hyperparameter search, so the inner tuning is not fully independent. The outer estimates are unaffected, because they are computed on folds the scaler never saw. The tuned hyperparameters are therefore mildly optimistic for the baselines, which biases the comparison in their favour and against the rule; since the baselines already win on every accuracy measure reported here, correcting the leak could only widen the margin by which the rule's own claims are conservative. It is recorded because it is a defect, not because it threatens a conclusion."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Second, as Section III-B records, the archive does not state whether each polymer's 500 spectra come from 500 distinct physical items. The evidence available against acquisition-block structure is reported in Section III, but if the specimens were in fact repeated measurements of a small number of items, all accuracies reported here, for every method, would be optimistic in the same direction."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Third, the detection threshold substitutes a Savitzky-Golay residual [61] for replicate acquisitions, because the collection contains none under fixed conditions. The substitution is defensible for instrument noise but does not capture specimen-to-specimen presentation variability, so the threshold is a lower bound and the referral rate reported here is correspondingly a lower bound."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Fourth, the mined rules are symmetric by construction, since a pair contributes the same evidence in both directions, so they establish association under held-fixed covariates and not direction or effect. Pairs are also not independent, because one specimen enters many pairs; the pair count is a computational quantity and not a sample size, and the Wilson intervals [62] computed on it should be read accordingly."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Fifth, the comparison in Table 9 bounds the claim of this article and should be read before its title. Each baseline given its own reject option at the same coverage is perfect on the specimens it keeps, so the rule is not the most accurate selective classifier available on this dataset; it is the one whose refusal is stated in named physical quantities. Readers who need maximal selective accuracy and do not need an auditable refusal should use a black box with a confidence threshold."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Sixth, the rough-set quantities depend strongly on the binning rule, and this is a genuine weakness of the method rather than a detail of implementation. The protocol specifies bins whose width is the detection threshold. Replacing them with ten equal-width bins, the obvious neutral alternative, lowers the quality of approximation of the best attribute pair from 0.9037 to 0.3057, the mean accuracy of approximation from 0.8342 to 0.1861, and the number of cells from 1183 to 43. It also changes which pair is best. The certainty reported in Section IV is therefore conditional on a discretisation derived from instrument noise, and a reader who prefers a different discretisation will obtain a substantially larger referral rate. The comparison is in the released sensitivity table and is drawn in Fig. 9."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Seventh, acceptance-sampling results are a design calculation under a binomial model with a single sensitivity and specificity applied to all classes. They are not an empirical lot-level validation, and no lot-level data was available."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "Eighth, standard designations cited in Section II were verified against catalogue titles and record identifiers only, because the standards bodies' pages were not retrievable in the environment used; edition numbers and withdrawal status should be confirmed before any contractual use. For the same reason the current editions of the polypropylene and poly(vinyl chloride) recyclate standards are not cited at all."
+    }
+   ]
+  },
+  {
+   "heading": "CONCLUSION",
+   "blocks": [
+    {
+     "type": "para",
+     "text": "A classifier built entirely from named spectral quantities, with a detection threshold calibrated from instrument noise and a decision rule that is permitted to abstain, identifies six industrial polymers with a balanced accuracy of 0.9973 on the 75.3% of specimens it accepts, against 0.9997 for the strongest conventional classifier evaluated on every specimen. Two named attributes also carry most of the structure: the best-approximating pair partitions the training specimens into 1183 cells and places 90.4% of them in cells that are unambiguous, with one polymer separated with no boundary region at all. That quantity is measured in training and on a different attribute pair from the one the classifier deploys, so it describes the representation and not the accepted fraction above. Placed inside a single-stage acceptance sampling plan, the same rule shifts risk onto the supplier rather than the buyer, which is quantified in the answer to RQ3 below."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The three questions posed in Section I are answered as follows. RQ1 is answered in the affirmative, with a stated price. On the specimens it accepts, the rule reaches 0.9973 balanced accuracy against 0.9997 for the strongest conventional classifier, at a referral rate of 24.7%. Forced to decide every specimen it loses 0.052 balanced accuracy, and that loss is significant. RQ2 is answered in the affirmative, but more narrowly than the literature would suggest. The attribute pair the rule selects was the same in 19 of 20 refits, and the ordering produced by post-hoc attribution held together across refits as well, at a mean rank correlation of 0.8816. What moved was the part a specification would cite: the top three attributes changed in one repeat in ten. At matched size of two, however, the attribution is the more stable selector, so the comparative stability claim is withdrawn: what the rule offers is that its selected pair is the decision itself, not a ranking of inputs to a verdict that still uses all nine. A second selection criterion, maximising the training-set quality of approximation, is stable in all twenty refits but chooses a different pair. Table 10 settles which is right. The cross-validated criterion is first on all three out-of-fold measures. The approximation criterion is behind it on all three, despite holding the highest training-set value of its own objective, so it overfits the training partition on the measure that decides a verdict. The representation is reproducible under a fixed criterion, and the criterion itself is now chosen on evidence instead of convention. RQ3 is answered quantitatively, and the answer is asymmetric. For a plan with a sample of 50 and no acceptable defectives, an inspector with the classifier's own measured sensitivity and specificity raises producer risk from 0.3950 to 0.6316 at a one percent defective fraction. Consumer risk at a ten percent defective fraction falls slightly. The supplier of conforming material, not the buyer, pays for measurement uncertainty, and the referral outcome is the mechanism that removes that penalty at a measured cost. The protocol's fourth question, on data efficiency, is answered in the negative: no crossover occurs at any training size between one and one hundred percent, and the gap narrows rather than widens, so the binding constraint on this rule is the expressive capacity of a two-attribute partition and not the amount of data."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "What this implies for a circular economy is specific, and it follows from two of the measurements rather than from the framing. The first is the distribution of referrals across materials. Poly(ethylene terephthalate) is accepted on 95.2% of specimens and poly(vinyl chloride) on 94.6%, while low-density polyethylene is accepted on 33.8% and high-density polyethylene on 71.4%. A verification budget is therefore not spread evenly over a recyclate stream: it concentrates on the polyolefins, where the polymers differ by chain branching rather than by the presence of a functional group, and where a single mid-infrared spectrum carries the least discriminating evidence. That is the same place where mechanical recycling markets are hardest to organise, and it suggests that the binding constraint there is partly metrological and not only logistic. It also gives a concrete target for instrumentation: the gain from adding a second modality is largest for exactly the two polyethylenes, and can be estimated before the instrument is bought, because the referral rate per material is measurable in advance."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The second is the asymmetry of the sampling risk. Under every plan examined, an imperfect inspector raises the producer's risk of having conforming material rejected far more than it raises the buyer's risk of accepting non-conforming material. In a recyclate market this asymmetry falls on the party that supplies good material, and the rational response to it is to sell into a lower-value application where the specification is loose enough that identity need not be proven. Measurement uncertainty therefore acts as a quiet subsidy for downcycling. A classifier that declines to decide does not remove that cost, but it moves it: the ambiguous batch is routed to a confirmatory test at a stated price instead of being rejected on evidence that was never sufficient. The quantity a contract can then carry is not an accuracy figure, which no supplier can verify on their own batch, but a referral rate and a named pair of spectral quantities, both of which can be audited and disputed. Whether thatchanges behaviour in a real market is an empirical question this article does not answer; what it provides is the measured quantity such a contract would need."
+    },
+    {
+     "type": "para",
+     "indent": true,
+     "text": "The practical consequence is that a laboratory can state, per specimen, what the decision rests on and when the evidence was insufficient, and can quote the rate at which the second case occurs. Future work should establish the referral rate on material that is not pristine, where it will be higher and more informative, and should replace the noise-based threshold with one estimated from genuine replicate acquisitions so that presentation variability is included. The data, the code, the frozen protocol and the derived tables are released so that both steps can be taken against the results reported here."
+    }
+   ]
+  },
+  {
+   "heading": "DATA AND CODE AVAILABILITY",
+   "blocks": [
+    {
+     "type": "para",
+     "indent": false,
+     "text": "The two spectral collections analysed here are public and were not modified: the primary dataset of 3000 specimens [58] and the recyclate archive used as a transfer case [59], both under a Creative Commons Attribution licence and addressed by deposit record identifier. The analysis code, the frozen protocol with its version tag, the download script that retrieves both collections, every derived result table and every figure script are available in the repository at https://github.com/s-matysik/glassbox-ftir [76]. Interactive supporting material covering the ten analyses reported above, with the data behind each chart available for download, is published at https://s-matysik.github.io/glassbox-ftir/ [77]. Each reported number is produced by a named script from a named table, and the mapping between the two is given in the repository, so any value in this article can be traced to the code that generated it without contacting the authors."
+    }
+   ]
+  }
+ ],
+ "references": [
+  "G. A. Akerlof, \"The Market for \"Lemons\": Quality Uncertainty and the Market Mechanism,\" The Quarterly Journal of Economics, 1970. doi: 10.2307/1879431.",
+  "F. Nicolli, N. Johnstone, and P. Söderholm, \"Resolving failures in recycling markets: the role of technological innovation,\" Environmental Economics and Policy Studies, 2012. doi: 10.1007/s10018-012-0031-9.",
+  "M. K. Eriksen, A. Damgaard, A. Boldrin, and T. F. Astrup, \"Quality Assessment and Circularity Potential of Recovery Systems for Household Plastic Waste,\" Journal of Industrial Ecology, 2018. doi: 10.1111/jiec.12822.",
+  "M. Gall, M. Wiener, C. Chagas de Oliveira, R. W. Lang, and E. G. Hansen, \"Building a circular plastics economy with informal waste pickers: Recyclate quality, business model, and societal impacts,\" Resources, Conservation and Recycling, 2020. doi: 10.1016/j.resconrec.2020.104685.",
+  "S. Huysveld, K. Ragaert, R. Demets, T. Nhu, D. Civancik-Uslu, M. Kusenberg, K. Van Geem, S. De Meester, and J. Dewulf, \"Technical and market substitutability of recycled materials: Calculating the environmental benefits of mechanical and chemical recycling of plastic packaging waste,\" Waste Management, 2022. doi: 10.1016/j.wasman.2022.08.006.",
+  "M. Jung, F. Horgen, S. Orski, V. Rodriguez C., K. Beers, G. Balazs, \"Validation of ATR FT-IR to identify polymers of plastic marine debris, including those ingested by marine organisms,\" Marine Pollution Bulletin, 2018. doi: 10.1016/j.marpolbul.2017.12.061.",
+  "C. Rudin, \"Stop explaining black box machine learning models for high stakes decisions and use interpretable models instead,\" Nature Machine Intelligence, 2019. doi: 10.1038/s42256-019-0048-x.",
+  "Z. C. Lipton, \"The mythos of model interpretability,\" Communications of the ACM, 2018. doi: 10.1145/3233231.",
+  "D. Slack, S. Hilgard, E. Jia, S. Singh, and H. Lakkaraju, \"Fooling LIME and SHAP,\" Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society, 2020. doi: 10.1145/3375627.3375830.",
+  "I. E. Kumar, S. Venkatasubramanian, C. Scheidegger, and S. A. Friedler, \"Problems with Shapley-value-based explanations as feature importance measures,\" arXiv:2002.11097, 2020. doi: 10.48550/arxiv.2002.11097.",
+  "D. Alvarez-Melis and T. Jaakkola, \"On the Robustness of Interpretability Methods,\" arXiv:1806.08049, 2018. doi: 10.48550/arxiv.1806.08049.",
+  "A. Ghorbani, A. Abid, and J. Zou, \"Interpretation of Neural Networks Is Fragile,\" Proceedings of the AAAI Conference on Artificial Intelligence, 2019. doi: 10.1609/aaai.v33i01.33013681.",
+  "J. Adebayo, J. Gilmer, M. Muelly, I. Goodfellow, M. Hardt, and B. Kim, \"Sanity Checks for Saliency Maps,\" arXiv:1810.03292, 2018. doi: 10.48550/arxiv.1810.03292.",
+  "Z. Pawlak, \"Rough sets,\" International Journal of Computer & Information Sciences, 1982. doi: 10.1007/bf01001956.",
+  "Y. Yao, \"Three-way decisions with probabilistic rough sets,\" Information Sciences, 2010. doi: 10.1016/j.ins.2009.09.021.",
+  "Y. Yao, \"An Outline of a Theory of Three-Way Decisions,\" Lecture Notes in Computer Science, 2012. doi: 10.1007/978-3-642-32115-3_1.",
+  "R. Agrawal, T. Imieliński, and A. Swami, \"Mining association rules between sets of items in large databases,\" Proceedings of the 1993 ACM SIGMOD international conference on Management of data, 1993. doi: 10.1145/170035.170072.",
+  "Z. W. Ras and L. S. Tsay, \"Discovering Extended Action-Rules (System DEAR),\" Intelligent Information Processing and Web Mining, 2003. doi: 10.1007/978-3-540-36562-4_31.",
+  "V. H. da Silva, F. Murphy, J. M. Amigo, C. Stedmon, and J. Strand, \"Classification and Quantification of Microplastics (<100 μm) Using a Focal Plane Array–Fourier Transform Infrared Imaging System and Machine Learning,\" Analytical Chemistry, 2020. doi: 10.1021/acs.analchem.0c01324.",
+  "B. Hufnagl, M. Stibi, H. Martirosyan, U. Wilczek, J. N. Möller, M. G. J. Löder, C. Laforsch, and H. Lohninger, \"Computer-Assisted Analysis of Microplastics in Environmental Samples Based on μFTIR Imaging in Combination with Machine Learning,\" Environmental Science & Technology Letters, 2021. doi: 10.1021/acs.estlett.1c00851.",
+  "Y. Liu, W. Yao, F. Qin, L. Zhou, and Y. Zheng, \"Spectral Classification of Large-Scale Blended (Micro)Plastics Using FT-IR Raw Spectra and Image-Based Machine Learning,\" Environmental Science & Technology, 2023. doi: 10.1021/acs.est.2c08952.",
+  "O. Rosales-Martínez, E. E. Granda-Gutiérrez, R. A. García-Hernández, R. Alejo-Eleuterio, and A. A. Flores-Fuentes, \"Spectral Derivatives Improve FTIR-Based Machine Learning Classification of Plastic Polymers,\" Modelling, 2025. doi: 10.3390/modelling6040115.",
+  "O. Villegas-Camacho, I. Francisco-Valencia, R. Alejo-Eleuterio, E. E. Granda-Gutiérrez, S. Martínez-Gallegos, and D. Villanueva-Vásquez, \"FTIR-Based Microplastic Classification: A Comprehensive Study on Normalization and ML Techniques,\" Recycling, 2025. doi: 10.3390/recycling10020046.",
+  "X. Yan, Z. Cao, A. Murphy, and Y. Qiao, \"An ensemble machine learning method for microplastics identification with FTIR spectrum,\" Journal of Environmental Chemical Engineering, 2022. doi: 10.1016/j.jece.2022.108130.",
+  "W. A. Williams and S. Aravamudhan, \"Reliability Testing of Machine Learning Model Prediction Capability towards Unidentifiable Microplastic Spectral Data: Triple Battery and Colorant Investigation,\" Microplastics and Nanoplastics, 2025. doi: 10.1186/s43591-024-00107-4.",
+  "S. Jiang, Z. Xu, M. Kamran, S. Zinchik, S. Paheding, A. G. McDonald, E. Bar-Ziv, and V. M. Zavala, \"Using ATR-FTIR spectra and convolutional neural networks for characterizing mixed plastic waste,\" Computers & Chemical Engineering, 2021. doi: 10.1016/j.compchemeng.2021.107547.",
+  "J. A. Smolen, G. E. Moore, N. D. Perez, and K. L. Wooley, \"Adaptable microplastic classification using similarity learning on µFTIR spectra collected from µFTIR focal plane array imaging,\" Proceedings of the National Academy of Sciences, 2025. doi: 10.1073/pnas.2509745122.",
+  "F. Herb, M. Boley, and W. K. Fong, \"Machine learning outperforms humans in microplastic characterization and reveals human labelling errors in FTIR data,\" Journal of Hazardous Materials, 2025. doi: 10.1016/j.jhazmat.2024.136989.",
+  "X. Liu, X. Song, Y. Sulub, D. Zoller, Z. (James) Kong, and B. N. Johnson, \"Classification of recycled plastics using sparse and imbalanced spectral data and data augmentation by the generative adversarial network,\" The Analyst, 2026. doi: 10.1039/d5an01042j.",
+  "L. I. Bendell, S. Rankin, K. Delany, K. Stenner, A. Silveri, and W. Zhou, \"Reducing the Uncertainty of Microplastic Identification and the Preferred Use of the Varnish clam (<i>Nuttallia obscurata</i>) as Compared to Other Bivalves as a Biomonitor of Plastic Pollution,\" ACS ES&T Water, 2024. doi: 10.1021/acsestwater.4c00732.",
+  "Z. Tan, Z. Fei, B. Zhao, J. Yang, X. Xu, Z. Wang, \"Identification for Recycling Polyethylene Terephthalate (PET) Plastic Bottles by Polarization Vision,\" IEEE Access, vol. 9, pp. 27510-27517, 2021. doi: 10.1109/ACCESS.2021.3050816.",
+  "Y. Tao, \"Quantitative Analysis of Near-Infrared Spectroscopy of Blended Fabrics Based on Convolutional Neural Network,\" IEEE Access, vol. 11, pp. 46644-46652, 2023. doi: 10.1109/ACCESS.2023.3275430.",
+  "P. Jitngernmadan, P. Boonmee, T. Nupim, P. Wannapanon, P. Waengnoi, A. Klayburee, \"A Sensing-to-Sorting Multimodal Robotic Pipeline for Waste Classification Using Low-Cost RGB-D Vision and Spectral Sensors With Adaptive Bayesian Fusion,\" IEEE Access, vol. 14, pp. 116909-116931, 2026. doi: 10.1109/ACCESS.2026.3717685.",
+  "C. Kikome, E. Wagisha, G. Okumu, R. Nakibuule, M. Amiyo, H. Nyende, \"Interpretable Attention-based Mechanisms for Medical Waste Sorting with Meta Learning,\" IEEE Access, 2026. doi: 10.1109/ACCESS.2026.3740088.",
+  "S. Abdullah, I. Ullah, F. Khan, \"Analyzing the Deep Learning Techniques Based on Three Way Decision Under Double Hierarchy Linguistic Information and Application,\" IEEE Access, vol. 12, pp. 85880-85893, 2024. doi: 10.1109/ACCESS.2023.3292332.",
+  "J. Setu, N. Halder, A. Islam, M. Amin, \"RSTHFS: A Rough Set Theory-Based Hybrid Feature Selection Method for Phishing Website Classification,\" IEEE Access, vol. 13, pp. 68820-68830, 2025. doi: 10.1109/ACCESS.2025.3561237.",
+  "S. Matysik, J. Wisniewska, P. K. Frankowski, \"Mapping Scientific Knowledge in Systematic Literature Reviews Through Embeddings and Bibliometric Techniques,\" IEEE Access, vol. 14, pp. 143326-143347, 2026. doi: 10.1109/ACCESS.2026.3733019.",
+  "S. Matysik, K. Jaworski, \"The Use of AI in Academic Work: An Interdisciplinary Guide for PhD Students and Young Researchers,\" Monograph, Scientific Publishing House (SPH), Centre of Sociological Research, Szczecin, Poland, 129 pp., ISBN 978-83-973513-8-7, 2025. doi: 10.14254/978-83-973513-8-7/2025.",
+  "C. Chow, \"On optimum recognition error and reject tradeoff,\" IEEE Transactions on Information Theory, 1970. doi: 10.1109/TIT.1970.1054406.",
+  "K. Hendrickx, L. Perini, D. Van der Plas, W. Meert, J. Davis, \"Machine learning with a reject option: a survey,\" Machine Learning, 2024. doi: 10.1007/s10994-024-06534-x.",
+  "V. Vovk, A. Gammerman, and G. Shafer, \"Algorithmic Learning in a Random World,\" Springer, 2005. doi: 10.1007/b106715.",
+  "A. Barredo Arrieta, N. Díaz-Rodríguez, J. Del Ser, A. Bennetot, S. Tabik, A. Barbado, S. Garcia, S. Gil-Lopez, D. Molina, R. Benjamins, R. Chatila, and F. Herrera, \"Explainable Artificial Intelligence (XAI): Concepts, taxonomies, opportunities and challenges toward responsible AI,\" Information Fusion, 2020. doi: 10.1016/j.inffus.2019.12.012.",
+  "S. Lundberg and S. Lee, \"A Unified Approach to Interpreting Model Predictions,\" arXiv:1705.07874, 2017. doi: 10.48550/arxiv.1705.07874.",
+  "M. T. Ribeiro, S. Singh, and C. Guestrin, \"\"Why Should I Trust You?\",\" Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, 2016. doi: 10.1145/2939672.2939778.",
+  "X. Yan, Z. Cao, A. Murphy, Y. Ye, X. Wang, and Y. Qiao, \"FRDA: Fingerprint Region based Data Augmentation using explainable AI for FTIR based microplastics classification,\" Science of The Total Environment, 2023. doi: 10.1016/j.scitotenv.2023.165340.",
+  "L. Geng and H. J. Hamilton, \"Interestingness measures for data mining,\" ACM Computing Surveys, 2006. doi: 10.1145/1132960.1132963.",
+  "Z. W. Raś and A. Dardzińska, \"Action Rules Discovery, a New Simplified Strategy,\" Lecture Notes in Computer Science, 2006. doi: 10.1007/11875604_51.",
+  "A. A. Tzacheva and Z. W. Raś, \"Action rules mining,\" International Journal of Intelligent Systems, 2005. doi: 10.1002/int.20092.",
+  "Z. Pawlak and A. Skowron, \"Rudiments of rough sets,\" Information Sciences, 2007. doi: 10.1016/j.ins.2006.06.003.",
+  "W. Ziarko, \"Variable precision rough set model,\" Journal of Computer and System Sciences, 1993. doi: 10.1016/0022-0000(93)90048-2.",
+  "Y. Yao, \"The superiority of three-way decisions in probabilistic rough set models,\" Information Sciences, 2011. doi: 10.1016/j.ins.2010.11.019.",
+  "Y. Yao, \"Tri-level thinking: models of three-way decision,\" International Journal of Machine Learning and Cybernetics, 2019. doi: 10.1007/s13042-019-01040-2.",
+  "M. Abdar, M. Samami, S. Dehghani Mahmoodabad, T. Doan, B. Mazoure, R. Hashemifesharaki, L. Liu, A. Khosravi, U. R. Acharya, V. Makarenkov, and S. Nahavandi, \"Uncertainty quantification in skin cancer classification using three-way decision-based Bayesian deep learning,\" Computers in Biology and Medicine, 2021. doi: 10.1016/j.compbiomed.2021.104418.",
+  "E. G. Schilling and D. V. Neubauer, \"Acceptance Sampling in Quality Control,\" CRC Press, Boca Raton, FL, USA, 3rd ed., 2017. doi: 10.1201/9781315120744.",
+  "P. K. Frankowski, M. Maka, R. D. Zietek, S. Jankowski, T. Stawicki, S. Matysik, \"Feature Extraction Methods in Signal Processing - A Short Review and New Selection Algorithm,\" Lecture Notes in Networks and Systems, Springer Nature Switzerland, pp. 94-105, 2025. doi: 10.1007/978-3-032-06611-4_8.",
+  "P. K. Frankowski, \"Association Rules Analysis for Enhanced Signal Evaluation: Uncovering Exclusive Patterns in Identifying Reinforced Concrete Parameters,\" 2025 17th International Conference on Information Technology and Electrical Engineering (ICITEE), pp. 1-6, 2025. doi: 10.1109/ICITEE66631.2025.11338237.",
+  "P. K. Frankowski, P. Majzner, M. Maka, T. Chady, \"Enhancing the Identification of Corrosion in Reinforced Concrete Structures Using Association Rules Analysis and the Non-Destructive M5 Method,\" Proc. 33rd International Conference on Information Systems Development (ISD2025), Belgrade, 2025. doi: 10.62036/ISD.2025.46.",
+  "Villegas Camacho, Octavio, Alejo Eleuterio, Roberto, Francisco Valencia, Iván, Granda Gutiérrez, Everardo, Mártinez Gallegos, Sonia, Illescas, Javier, \"FTIR-Plastics: a Fourier Transform Infrared Spectroscopy dataset for the six most prevalent industrial plastic polymers,\" Zenodo, 2024. doi: 10.5281/zenodo.10736650.",
+  "Prosenc, Franja, Leban, Pia, Šunta, Urška, Istenič, Darja, \"Plastic Contamination in Waste-to-Resource Agriculture: Plastic Particles' FTIR Spectra,\" Zenodo, 2026. doi: 10.5281/zenodo.21822279.",
+  "W. Cowger, Z. Steinmetz, A. Gray, K. Munno, J. Lynch, H. Hapich, \"Microplastic Spectral Classification Needs an Open Source Community: Open Specy to the Rescue!,\" Analytical Chemistry, 2021. doi: 10.1021/acs.analchem.1c00123.",
+  "A. Savitzky, M. Golay, \"Smoothing and Differentiation of Data by Simplified Least Squares Procedures,\" Analytical Chemistry, 1964. doi: 10.1021/ac60214a047.",
+  "E. Wilson, \"Probable Inference, the Law of Succession, and Statistical Inference,\" Journal of the American Statistical Association, 1927. doi: 10.1080/01621459.1927.10502953.",
+  "Y. Benjamini, Y. Hochberg, \"Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing,\" Journal of the Royal Statistical Society Series B: Statistical Methodology, 1995. doi: 10.1111/j.2517-6161.1995.tb02031.x.",
+  "C. Cortes, V. Vapnik, \"Support-vector networks,\" Machine Learning, 1995. doi: 10.1007/BF00994018.",
+  "L. Breiman, \"Random Forests,\" Machine Learning, 2001. doi: 10.1023/A:1010933404324.",
+  "M. Barker, W. Rayens, \"Partial least squares for discrimination,\" Journal of Chemometrics, 2003. doi: 10.1002/cem.785.",
+  "J. Acquarelli, T. van Laarhoven, J. Gerretzen, T. Tran, L. Buydens, E. Marchiori, \"Convolutional neural networks for vibrational spectroscopic data analysis,\" Analytica Chimica Acta, 2017. doi: 10.1016/j.aca.2016.12.010.",
+  "F. Pedregosa, G. Varoquaux, A. Gramfort, V. Michel, B. Thirion, et al., \"Scikit-learn: Machine Learning in Python,\" Journal of Machine Learning Research, vol. 12, 2011. doi: 10.48550/arXiv.1201.0490.",
+  "A. Paszke, S. Gross, F. Massa, A. Lerer, J. Bradbury, et al., \"PyTorch: An Imperative Style, High-Performance Deep Learning Library,\" Advances in Neural Information Processing Systems 32, 2019. [Online]. Available: https://arxiv.org/abs/1912.01703",
+  "K. Brodersen, C. Ong, K. Stephan, J. Buhmann, \"The Balanced Accuracy and Its Posterior Distribution,\" 2010 20th International Conference on Pattern Recognition, 2010. doi: 10.1109/ICPR.2010.764.",
+  "B. Matthews, \"Comparison of the predicted and observed secondary structure of T4 phage lysozyme,\" Biochimica et Biophysica Acta (BBA) - Protein Structure, 1975. doi: 10.1016/0005-2795(75)90109-9.",
+  "D. Chicco, G. Jurman, \"The advantages of the Matthews correlation coefficient (MCC) over F1 score and accuracy in binary classification evaluation,\" BMC Genomics, 2020. doi: 10.1186/s12864-019-6413-7.",
+  "C. Nadeau, Y. Bengio, \"Inference for the Generalization Error,\" Machine Learning, 2003. doi: 10.1023/A:1024068626366.",
+  "S. Lundberg, G. Erion, H. Chen, A. DeGrave, J. Prutkin, B. Nair, \"From local explanations to global understanding with explainable AI for trees,\" Nature Machine Intelligence, 2020. doi: 10.1038/s42256-019-0138-9.",
+  "M. G. Kendall, \"A new measure of rank correlation,\" Biometrika, 1938. doi: 10.1093/biomet/30.1-2.81.",
+  "S. Matysik, P. K. Frankowski, \"glassbox-ftir: analysis code, frozen protocol and derived result tables for glass-box FTIR classification of plastics,\" GitHub repository, 2026. [Online]. Available: https://github.com/s-matysik/glassbox-ftir",
+  "S. Matysik, P. K. Frankowski, \"Glass-box FTIR classification of plastics: interactive supporting material,\" Web application, 2026. [Online]. Available: https://s-matysik.github.io/glassbox-ftir/"
+ ],
+ "biographies": []
+}
