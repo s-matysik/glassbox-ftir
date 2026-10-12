@@ -102,7 +102,9 @@ setTimeout(async () => {
     console.log(`${ok ? "ok  " : "FAIL"} ${r.view.padEnd(11)} svg=${r.svg} marks=${String(r.paths).padEnd(5)} ` +
                 `controls=${String(r.controls).padEnd(3)} chars=${String(r.chars).padEnd(6)} newErrors=${r.newErrors}`);
   }
-  console.log("views failing: " + (bad.length ? bad.join(", ") : "none"));
+  const ov=[...dom.window.document.querySelectorAll("#views")].map(e=>e.textContent).join(" ");
+console.log("OVERVIEW:", (ov.match(/\d+ \/ 20/g)||[]).join(" | "));
+console.log("views failing: " + (bad.length ? bad.join(", ") : "none"));
   console.log("total errors: " + errors.length);
   errors.slice(0, 8).forEach(e => console.log("  - " + e.split("\n").slice(0, 3).join("\n    ")));
   process.exit(bad.length || errors.length ? 1 : 0);

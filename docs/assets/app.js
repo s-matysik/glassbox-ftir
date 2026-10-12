@@ -86,8 +86,10 @@
       { v: (cov.coverage_mean * 100).toFixed(1) + "%", k: "specimens the rule accepts" },
       { v: GB.nice(svm.bacc_mean, 4), k: "strongest black box, all specimens" },
       { v: GB.nice(gset.gamma, 4), k: "cells unambiguous in training, best pair", c: "ok" },
-      { v: gbsel.modal_share * 20 + " / 20", k: "repeats with an unchanged attribute pair", c: "ok" },
-      { v: shap2.modal_share * 20 + " / 20", k: "repeats with an unchanged attribution top pair" }
+      { v: Math.round(gbsel.modal_share * gbsel.repeats) + " / " + gbsel.repeats,
+        k: "repeats with an unchanged attribute pair", c: "ok" },
+      { v: Math.round(shap2.modal_share * shap2.repeats) + " / " + shap2.repeats,
+        k: "repeats with an unchanged attribution top pair" }
     ];
     var g = document.createElement("div");
     g.className = "stat-grid";
