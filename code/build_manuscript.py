@@ -100,8 +100,10 @@ def _styled(doc, text, preferred, fallback_pt):
 def add_table(doc, caption_number, caption, header, rows, note=None):
     cap = _styled(doc, f"TABLE {caption_number}", ("Table Title",), 8)
     cap.runs[0].bold = True
+    _keep_together(cap, with_next=True)
     sub = _styled(doc, caption, ("Table Caption",), 7)
     sub.runs[0].italic = True
+    _keep_together(sub, with_next=True)
     t = doc.add_table(rows=1, cols=len(header))
     for name in ("Table Grid", "TableGrid", "Grid Table 1 Light"):
         try:
@@ -122,6 +124,7 @@ def add_table(doc, caption_number, caption, header, rows, note=None):
         for i, v in enumerate(row):
             cells[i].text = ""
             cells[i].paragraphs[0].add_run("" if v is None else str(v)).font.size = Pt(8)
+    _no_row_split(t)
     if note:
         n = _styled(doc, note, ("Table Caption",), 7)
         n.runs[0].italic = True
@@ -129,12 +132,49 @@ def add_table(doc, caption_number, caption, header, rows, note=None):
     return t
 
 
+def _no_row_split(table):
+    """Forbid a table row from breaking across a column or page.
+
+    A row split in two is the form this defect takes in tables: the header or
+    a data row ends up with its first line in one column and the rest in the
+    next. w:cantSplit on each row is the only switch Word honours for this.
+    """
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    for row in table.rows:
+        trPr = row._tr.get_or_add_trPr()
+        if trPr.find(qn("w:cantSplit")) is None:
+            trPr.append(OxmlElement("w:cantSplit"))
+
+
+def _keep_together(paragraph, with_next=True):
+    """Stop Word from separating a float from the text that identifies it.
+
+    python-docx exposes keep_with_next only through the paragraph format, and
+    the template's styles do not set it, so an image and its caption can land
+    in different columns or on different pages. Setting it on the image
+    paragraph binds the image to the caption that follows; setting
+    keep_together on both stops either one being split internally.
+    """
+    pf = paragraph.paragraph_format
+    pf.keep_with_next = with_next
+    pf.keep_together = True
+    pf.widow_control = True
+
+
 def add_figure(doc, filename, number, caption, width_in=3.4):
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
     path = os.path.join(FIG, filename)
     if not os.path.exists(path):
         raise FileNotFoundError(f"figure missing: {path}")
     doc.add_picture(path, width=Inches(width_in))
-    add(doc, f"FIGURE {number}.  {caption}", "caption")
+    pic = doc.paragraphs[-1]
+    pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _keep_together(pic, with_next=True)
+    cap = add(doc, f"FIGURE {number}.  {caption}", "caption")
+    if cap is not None:
+        _keep_together(cap, with_next=False)
+    return cap
 
 
 

@@ -1,8 +1,7 @@
 # Glass-box FTIR classification of plastics
 
-Replication material for the IEEE Access article *A Glass-Box Classifier for
-FTIR Identification of Plastics: Accuracy Parity on Accepted Specimens With an
-Explicit Referral Rate*, together with the interactive documentation site.
+Replication material for the IEEE Access article *Auditable Quality Control of Recycled Plastics: A Glass-Box FTIR Classifier
+With Accuracy Parity on Accepted Specimens and an Explicit Referral Rate*, together with the interactive documentation site.
 
 Every number quoted in the manuscript and its supplement is produced by a named
 script in `code/` from a named table in `results/`. Nothing is typed by hand, so
